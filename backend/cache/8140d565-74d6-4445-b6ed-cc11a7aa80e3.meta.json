@@ -1,0 +1,205 @@
+{
+  "dataset_id": "8140d565-74d6-4445-b6ed-cc11a7aa80e3",
+  "filename": "data.xlsx",
+  "row_count": 866,
+  "column_count": 39,
+  "columns": [
+    {
+      "name": "Ngay",
+      "dtype": "date",
+      "original_name": "Ngay"
+    },
+    {
+      "name": "MA CONG TY",
+      "dtype": "string",
+      "original_name": "MA CONG TY"
+    },
+    {
+      "name": "Ma CH",
+      "dtype": "string",
+      "original_name": "Ma CH"
+    },
+    {
+      "name": "LOAI PHIEU",
+      "dtype": "string",
+      "original_name": "LOAI PHIEU"
+    },
+    {
+      "name": "MA PHIEU COC",
+      "dtype": "float",
+      "original_name": "MA PHIEU COC"
+    },
+    {
+      "name": "ID PT",
+      "dtype": "float",
+      "original_name": "ID PT"
+    },
+    {
+      "name": "STT PT",
+      "dtype": "float",
+      "original_name": "STT PT"
+    },
+    {
+      "name": "Danh mục sản phẩm",
+      "dtype": "string",
+      "original_name": "Danh mục sản phẩm"
+    },
+    {
+      "name": "Dòng sản phẩm",
+      "dtype": "string",
+      "original_name": "Dòng sản phẩm"
+    },
+    {
+      "name": "NHOM HANG",
+      "dtype": "string",
+      "original_name": "NHOM HANG"
+    },
+    {
+      "name": "MA HANG",
+      "dtype": "string",
+      "original_name": "MA HANG"
+    },
+    {
+      "name": "ID DAI CHI",
+      "dtype": "string",
+      "original_name": "ID DAI CHI"
+    },
+    {
+      "name": "DAI CHI",
+      "dtype": "string",
+      "original_name": "DAI CHI"
+    },
+    {
+      "name": "HAM LUONG KIM LOAI",
+      "dtype": "string",
+      "original_name": "HAM LUONG KIM LOAI"
+    },
+    {
+      "name": "GIOI TINH MA MAU",
+      "dtype": "string",
+      "original_name": "GIOI TINH MA MAU"
+    },
+    {
+      "name": "TEN HANG",
+      "dtype": "string",
+      "original_name": "TEN HANG"
+    },
+    {
+      "name": "CHUNG_LOAI",
+      "dtype": "string",
+      "original_name": "CHUNG_LOAI"
+    },
+    {
+      "name": "MAU SAC",
+      "dtype": "string",
+      "original_name": "MAU SAC"
+    },
+    {
+      "name": "DVT",
+      "dtype": "string",
+      "original_name": "DVT"
+    },
+    {
+      "name": "MA QUAY",
+      "dtype": "string",
+      "original_name": "MA QUAY"
+    },
+    {
+      "name": "TEN NV QUAY",
+      "dtype": "string",
+      "original_name": "TEN NV QUAY"
+    },
+    {
+      "name": "Ma KH DT",
+      "dtype": "float",
+      "original_name": "Ma KH DT"
+    },
+    {
+      "name": "TEN KH",
+      "dtype": "string",
+      "original_name": "TEN KH"
+    },
+    {
+      "name": "NGAY SINH",
+      "dtype": "date",
+      "original_name": "NGAY SINH"
+    },
+    {
+      "name": "DIA CHI",
+      "dtype": "string",
+      "original_name": "DIA CHI"
+    },
+    {
+      "name": "Quan",
+      "dtype": "string",
+      "original_name": "Quan"
+    },
+    {
+      "name": "Tinh",
+      "dtype": "string",
+      "original_name": "Tinh"
+    },
+    {
+      "name": "GIOI TINH",
+      "dtype": "string",
+      "original_name": "GIOI TINH"
+    },
+    {
+      "name": "SO LUONG",
+      "dtype": "float",
+      "original_name": "SO LUONG"
+    },
+    {
+      "name": "SO LUONG THEO DVT",
+      "dtype": "float",
+      "original_name": "SO LUONG THEO DVT"
+    },
+    {
+      "name": "TONG TRONG LUONG",
+      "dtype": "float",
+      "original_name": "TONG TRONG LUONG"
+    },
+    {
+      "name": "TRONG LUONG VANG",
+      "dtype": "float",
+      "original_name": "TRONG LUONG VANG"
+    },
+    {
+      "name": "TRONG LUONG DA",
+      "dtype": "float",
+      "original_name": "TRONG LUONG DA"
+    },
+    {
+      "name": "TIEN CONG BAN",
+      "dtype": "float",
+      "original_name": "TIEN CONG BAN"
+    },
+    {
+      "name": "DON GIA",
+      "dtype": "float",
+      "original_name": "DON GIA"
+    },
+    {
+      "name": "THANH TIEN",
+      "dtype": "float",
+      "original_name": "THANH TIEN"
+    },
+    {
+      "name": "DOANH THU THUAN",
+      "dtype": "float",
+      "original_name": "DOANH THU THUAN"
+    },
+    {
+      "name": "TONG TIEN VON",
+      "dtype": "float",
+      "original_name": "TONG TIEN VON"
+    },
+    {
+      "name": "Loi nhuan gop",
+      "dtype": "float",
+      "original_name": "Loi nhuan gop"
+    }
+  ],
+  "created_at": "2026-07-11T08:15:05.078459",
+  "sheet": "Export"
+}

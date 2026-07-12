@@ -1,0 +1,60 @@
+{
+  "dataset_id": "4d7bd716-bfdc-4eb4-a627-ae10020ab50b",
+  "filename": "sales.csv",
+  "row_count": 10000,
+  "column_count": 10,
+  "columns": [
+    {
+      "name": "order_id",
+      "dtype": "string",
+      "original_name": "order_id"
+    },
+    {
+      "name": "date",
+      "dtype": "date",
+      "original_name": "date"
+    },
+    {
+      "name": "region",
+      "dtype": "string",
+      "original_name": "region"
+    },
+    {
+      "name": "category",
+      "dtype": "string",
+      "original_name": "category"
+    },
+    {
+      "name": "product",
+      "dtype": "string",
+      "original_name": "product"
+    },
+    {
+      "name": "salesperson",
+      "dtype": "string",
+      "original_name": "salesperson"
+    },
+    {
+      "name": "quantity",
+      "dtype": "number",
+      "original_name": "quantity"
+    },
+    {
+      "name": "unit_price",
+      "dtype": "float",
+      "original_name": "unit_price"
+    },
+    {
+      "name": "revenue",
+      "dtype": "float",
+      "original_name": "revenue"
+    },
+    {
+      "name": "is_returned",
+      "dtype": "string",
+      "original_name": "is_returned"
+    }
+  ],
+  "created_at": "2026-07-11T07:18:19.786447",
+  "sheet": null
+}
