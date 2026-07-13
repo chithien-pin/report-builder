@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to import sheet";
-    const status = message.includes("BLOB_STORE_ID_READ_WRITE_TOKEN")
+    const status = message.includes("BLOB_READ_WRITE_TOKEN")
       ? 503
       : message.includes("Không") || message.includes("Sheet") || message.includes("link")
         ? 400

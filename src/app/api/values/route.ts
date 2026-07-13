@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const message = err instanceof Error ? err.message : "Values failed";
     const status = message.includes("không tồn tại")
       ? 400
-      : message.includes("BLOB_STORE_ID_READ_WRITE_TOKEN")
+      : message.includes("BLOB_READ_WRITE_TOKEN")
         ? 503
         : message.includes("not found")
           ? 410
