@@ -25,8 +25,9 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to import sheet";
-    const status =
-      message.includes("Không") || message.includes("Sheet") || message.includes("link")
+    const status = message.includes("BLOB_READ_WRITE_TOKEN")
+      ? 503
+      : message.includes("Không") || message.includes("Sheet") || message.includes("link")
         ? 400
         : 500;
     return NextResponse.json({ detail: message }, { status });

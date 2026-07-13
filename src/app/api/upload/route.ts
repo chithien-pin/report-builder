@@ -32,7 +32,11 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to parse file";
-    const status = message.includes("Unsupported") ? 400 : 500;
+    const status = message.includes("BLOB_READ_WRITE_TOKEN")
+      ? 503
+      : message.includes("Unsupported")
+        ? 400
+        : 500;
     return NextResponse.json({ detail: message }, { status });
   }
 }

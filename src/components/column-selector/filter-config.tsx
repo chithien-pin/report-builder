@@ -71,6 +71,7 @@ function GroupConfigCard({
   const setValuesLoadingColumn = useDashboardStore((s) => s.setValuesLoadingColumn);
 
   const [search, setSearch] = useState("");
+  const [valuesError, setValuesError] = useState<string | null>(null);
   const debouncedSearch = useDebounce(search, 300);
 
   const selected = selectedValuesByColumn[column] ?? [];
@@ -82,6 +83,7 @@ function GroupConfigCard({
   const loadValues = useCallback(async () => {
     if (!datasetId || !colMeta) return;
     setValuesLoadingColumn(column);
+    setValuesError(null);
     try {
       const result = await fetchColumnValues({
         datasetId,
@@ -91,8 +93,9 @@ function GroupConfigCard({
         limit: 300,
       });
       setColumnValuesForColumn(column, result.values, result.total);
-    } catch {
+    } catch (err) {
       setColumnValuesForColumn(column, [], 0);
+      setValuesError(err instanceof Error ? err.message : "Không tải được giá trị");
     } finally {
       setValuesLoadingColumn(null);
     }
@@ -222,7 +225,12 @@ function GroupConfigCard({
 
       <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-border bg-card p-1">
         {columnValues.length === 0 && !loading && (
-          <p className="px-2 py-4 text-center text-sm text-muted-foreground">Không có giá trị.</p>
+          <p className="px-2 py-4 text-center text-sm text-muted-foreground">
+            {valuesError ?? "Không có giá trị."}
+          </p>
+        )}
+        {valuesError && columnValues.length > 0 && (
+          <p className="px-2 pb-2 text-xs text-destructive">{valuesError}</p>
         )}
         {columnValues.map((item) => {
           const checked = selected.includes(item.key);

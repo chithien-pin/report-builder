@@ -33,7 +33,13 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Values failed";
-    const status = message.includes("không tồn tại") ? 400 : message.includes("not found") ? 404 : 500;
+    const status = message.includes("không tồn tại")
+      ? 400
+      : message.includes("BLOB_READ_WRITE_TOKEN")
+        ? 503
+        : message.includes("not found")
+          ? 410
+          : 500;
     return NextResponse.json({ detail: message }, { status });
   }
 }

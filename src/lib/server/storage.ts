@@ -11,14 +11,17 @@ type StoredMeta = DatasetMeta & { parquet_url?: string };
 
 const USE_BLOB = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
-/** Vercel/Lambda: chỉ ghi được /tmp. Local: .cache trong project. */
-function resolveLocalCacheDir(): string {
-  const onServerless =
+function isServerless(): boolean {
+  return (
     process.env.VERCEL === "1" ||
     Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
-    process.cwd().startsWith("/var/task");
+    process.cwd().startsWith("/var/task")
+  );
+}
 
-  if (onServerless) {
+/** Vercel/Lambda: chỉ ghi được /tmp. Local: .cache trong project. */
+function resolveLocalCacheDir(): string {
+  if (isServerless()) {
     return path.join(os.tmpdir(), "reportbtmh-cache");
   }
   return path.join(process.cwd(), ".cache");
@@ -53,11 +56,21 @@ async function getBlobUrl(pathname: string): Promise<string | null> {
   return hit?.url ?? null;
 }
 
+function assertBlobOnVercel() {
+  if (isServerless() && !USE_BLOB) {
+    throw new Error(
+      "Thiếu BLOB_READ_WRITE_TOKEN. Trên Vercel bắt buộc tạo Blob Store và thêm env BLOB_READ_WRITE_TOKEN, rồi Redeploy.",
+    );
+  }
+}
+
 export async function saveDataset(
   datasetId: string,
   parquetBuffer: Buffer,
   meta: DatasetMeta,
 ): Promise<void> {
+  assertBlobOnVercel();
+
   if (USE_BLOB) {
     const parquet = await put(parquetBlobKey(datasetId), parquetBuffer, {
       access: "public",
@@ -83,7 +96,11 @@ export async function saveDataset(
 export async function loadMeta(datasetId: string): Promise<StoredMeta> {
   if (USE_BLOB) {
     const url = await getBlobUrl(metaBlobKey(datasetId));
-    if (!url) throw new Error(`Dataset '${datasetId}' not found`);
+    if (!url) {
+      throw new Error(
+        `Dataset '${datasetId}' not found (Blob). Upload lại file hoặc kiểm tra BLOB_READ_WRITE_TOKEN.`,
+      );
+    }
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Dataset '${datasetId}' not found`);
     return (await res.json()) as StoredMeta;
@@ -93,7 +110,9 @@ export async function loadMeta(datasetId: string): Promise<StoredMeta> {
     const raw = await readFile(localMetaPath(datasetId), "utf-8");
     return JSON.parse(raw) as StoredMeta;
   } catch {
-    throw new Error(`Dataset '${datasetId}' not found`);
+    throw new Error(
+      `Dataset '${datasetId}' not found. Trên Vercel cần Blob Store — upload lại sau khi cấu hình BLOB_READ_WRITE_TOKEN.`,
+    );
   }
 }
 
