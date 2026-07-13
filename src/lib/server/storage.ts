@@ -9,7 +9,8 @@ import type { DatasetMeta } from "@/lib/types";
 
 type StoredMeta = DatasetMeta & { parquet_url?: string };
 
-const USE_BLOB = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+const BLOB_TOKEN = process.env.BLOB_STORE_ID_READ_WRITE_TOKEN ?? "";
+const USE_BLOB = Boolean(BLOB_TOKEN);
 
 function isServerless(): boolean {
   return (
@@ -51,7 +52,11 @@ async function ensureLocalCache() {
 }
 
 async function getBlobUrl(pathname: string): Promise<string | null> {
-  const { blobs } = await list({ prefix: pathname, limit: 20 });
+  const { blobs } = await list({
+    prefix: pathname,
+    limit: 20,
+    token: BLOB_TOKEN,
+  });
   const hit = blobs.find((b) => b.pathname === pathname);
   return hit?.url ?? null;
 }
@@ -59,7 +64,7 @@ async function getBlobUrl(pathname: string): Promise<string | null> {
 function assertBlobOnVercel() {
   if (isServerless() && !USE_BLOB) {
     throw new Error(
-      "Thiếu BLOB_READ_WRITE_TOKEN. Trên Vercel bắt buộc tạo Blob Store và thêm env BLOB_READ_WRITE_TOKEN, rồi Redeploy.",
+      "Thiếu BLOB_STORE_ID_READ_WRITE_TOKEN. Trên Vercel bắt buộc tạo Blob Store và thêm env BLOB_STORE_ID_READ_WRITE_TOKEN, rồi Redeploy.",
     );
   }
 }
@@ -77,6 +82,7 @@ export async function saveDataset(
       contentType: "application/octet-stream",
       addRandomSuffix: false,
       allowOverwrite: true,
+      token: BLOB_TOKEN,
     });
     const stored: StoredMeta = { ...meta, parquet_url: parquet.url };
     await put(metaBlobKey(datasetId), JSON.stringify(stored, null, 2), {
@@ -84,6 +90,7 @@ export async function saveDataset(
       contentType: "application/json",
       addRandomSuffix: false,
       allowOverwrite: true,
+      token: BLOB_TOKEN,
     });
     return;
   }
@@ -98,7 +105,7 @@ export async function loadMeta(datasetId: string): Promise<StoredMeta> {
     const url = await getBlobUrl(metaBlobKey(datasetId));
     if (!url) {
       throw new Error(
-        `Dataset '${datasetId}' not found (Blob). Upload lại file hoặc kiểm tra BLOB_READ_WRITE_TOKEN.`,
+        `Dataset '${datasetId}' not found (Blob). Upload lại file hoặc kiểm tra BLOB_STORE_ID_READ_WRITE_TOKEN.`,
       );
     }
     const res = await fetch(url);
@@ -111,7 +118,7 @@ export async function loadMeta(datasetId: string): Promise<StoredMeta> {
     return JSON.parse(raw) as StoredMeta;
   } catch {
     throw new Error(
-      `Dataset '${datasetId}' not found. Trên Vercel cần Blob Store — upload lại sau khi cấu hình BLOB_READ_WRITE_TOKEN.`,
+      `Dataset '${datasetId}' not found. Trên Vercel cần Blob Store — upload lại sau khi cấu hình BLOB_STORE_ID_READ_WRITE_TOKEN.`,
     );
   }
 }
