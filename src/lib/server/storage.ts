@@ -10,7 +10,21 @@ import type { DatasetMeta } from "@/lib/types";
 type StoredMeta = DatasetMeta & { parquet_url?: string };
 
 const USE_BLOB = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
-const LOCAL_CACHE = path.join(process.cwd(), ".cache");
+
+/** Vercel/Lambda: chỉ ghi được /tmp. Local: .cache trong project. */
+function resolveLocalCacheDir(): string {
+  const onServerless =
+    process.env.VERCEL === "1" ||
+    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+    process.cwd().startsWith("/var/task");
+
+  if (onServerless) {
+    return path.join(os.tmpdir(), "reportbtmh-cache");
+  }
+  return path.join(process.cwd(), ".cache");
+}
+
+const LOCAL_CACHE = resolveLocalCacheDir();
 const TMP = os.tmpdir();
 
 function parquetBlobKey(datasetId: string) {
@@ -49,12 +63,14 @@ export async function saveDataset(
       access: "public",
       contentType: "application/octet-stream",
       addRandomSuffix: false,
+      allowOverwrite: true,
     });
     const stored: StoredMeta = { ...meta, parquet_url: parquet.url };
     await put(metaBlobKey(datasetId), JSON.stringify(stored, null, 2), {
       access: "public",
       contentType: "application/json",
       addRandomSuffix: false,
+      allowOverwrite: true,
     });
     return;
   }
