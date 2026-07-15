@@ -1,20 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Roboto } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const roboto = Roboto({
+  variable: "--font-roboto",
+  subsets: ["latin", "vietnamese"],
+  weight: ["300", "400", "500", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "ReportBTMH - Dashboard số liệu",
-  description: "Upload CSV/XLSX/Google Sheets, group-by tự động tạo tab và card tổng",
+  title: "ReportBTMH — Báo cáo ngày",
+  description: "Dashboard báo cáo ngày: doanh số & sản lượng theo nhóm sản phẩm",
 };
 
 export default function RootLayout({
@@ -24,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
-      <body className={`${geistSans.variable} ${geistMono.variable} h-dvh overflow-hidden antialiased`}>
+      <body className={`${roboto.variable} h-dvh overflow-hidden font-sans antialiased`}>
         {children}
       </body>
     </html>

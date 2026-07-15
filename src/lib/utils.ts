@@ -12,7 +12,3 @@ export function formatNumber(value: number | null | undefined): string {
     minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
   }).format(value);
 }
-
-export function schemaFingerprint(columns: string[]): string {
-  return columns.slice().sort().join("|");
-}

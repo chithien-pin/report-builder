@@ -1,15 +1,15 @@
 "use client";
 
-import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
-import { UploadScreen } from "@/components/dashboard/upload-screen";
-import { useDashboardStore } from "@/lib/store";
+import { ReportScreen } from "@/components/report/report-screen";
+import { UploadScreen } from "@/components/report/upload-screen";
+import { useReportStore } from "@/lib/report-store";
 
 export default function HomePage() {
-  const meta = useDashboardStore((s) => s.meta);
+  const datasetId = useReportStore((s) => s.datasetId);
 
-  if (!meta) {
+  if (!datasetId) {
     return <UploadScreen />;
   }
 
-  return <DashboardScreen />;
+  return <ReportScreen />;
 }
