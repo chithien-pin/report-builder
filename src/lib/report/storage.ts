@@ -15,6 +15,22 @@ import type {
   ReportDatasetMeta,
   TargetData,
 } from "./types";
+import { SALES_SCHEMA_VERSION } from "./types";
+import { normalizeTargetWeekPeriods } from "./week-periods";
+
+function normalizeTarget(target: TargetData, filename: string): TargetData {
+  const { planMonth, weekPeriods } = normalizeTargetWeekPeriods(
+    target.weekPeriods,
+    target.planMonth,
+    filename,
+  );
+  return {
+    ...target,
+    planMonth,
+    weekPeriods,
+    employeePlans: target.employeePlans ?? [],
+  };
+}
 
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN ?? "";
 const USE_BLOB = Boolean(BLOB_TOKEN);
@@ -39,16 +55,142 @@ function blobKey(datasetId: string) {
   return `reports/${datasetId}.json`;
 }
 
-function targetBlobKey() {
+function targetJsonBlobKey() {
   return `targets/${PERSISTED_TARGET_ID}.json`;
+}
+
+function targetSourceBlobKey() {
+  return `targets/${PERSISTED_TARGET_ID}.bin`;
 }
 
 function localPath(datasetId: string) {
   return path.join(LOCAL_CACHE, `report-${datasetId}.json`);
 }
 
+function localSalesPath(datasetId: string) {
+  return path.join(LOCAL_CACHE, `report-${datasetId}-sales.bin`);
+}
+
 function localTargetPath() {
   return path.join(LOCAL_CACHE, `${PERSISTED_TARGET_ID}.json`);
+}
+
+function localTargetBlobPath() {
+  return path.join(LOCAL_CACHE, `${PERSISTED_TARGET_ID}.bin`);
+}
+
+async function writeTargetBlob(buffer: Buffer) {
+  if (USE_BLOB) {
+    await put(targetSourceBlobKey(), buffer, {
+      access: "public",
+      contentType: "application/octet-stream",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      token: BLOB_TOKEN,
+    });
+    return;
+  }
+  await ensureCache();
+  await writeFile(localTargetBlobPath(), buffer);
+}
+
+async function readTargetBlob(): Promise<Buffer | null> {
+  if (USE_BLOB) {
+    const { blobs } = await list({ prefix: targetSourceBlobKey(), limit: 5, token: BLOB_TOKEN });
+    const hit = blobs.find((b) => b.pathname === targetSourceBlobKey());
+    if (!hit) return null;
+    const res = await fetch(hit.url);
+    if (!res.ok) return null;
+    return Buffer.from(await res.arrayBuffer());
+  }
+  try {
+    return await readFile(localTargetBlobPath());
+  } catch {
+    return null;
+  }
+}
+
+async function maybeRefreshTarget(dataset: ReportDataset): Promise<ReportDataset> {
+  if ((dataset.target.employeePlans?.length ?? 0) > 0) return dataset;
+  const targetBuffer = await readTargetBlob();
+  if (!targetBuffer) return dataset;
+  const parsed = parseTargetBuffer(targetBuffer, dataset.meta.targetFilename);
+  if ((parsed.employeePlans?.length ?? 0) === 0) return dataset;
+  dataset.target = normalizeTarget(
+    { ...dataset.target, employeePlans: parsed.employeePlans },
+    dataset.meta.targetFilename,
+  );
+  await saveReportDataset(dataset);
+  await savePersistedTarget(dataset.target, dataset.meta.targetFilename);
+  return dataset;
+}
+
+function salesBlobKey(datasetId: string) {
+  return `reports/${datasetId}-sales.bin`;
+}
+
+async function writeSalesBlob(datasetId: string, buffer: Buffer) {
+  if (USE_BLOB) {
+    await put(salesBlobKey(datasetId), buffer, {
+      access: "public",
+      contentType: "application/octet-stream",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      token: BLOB_TOKEN,
+    });
+    return;
+  }
+  await ensureCache();
+  await writeFile(localSalesPath(datasetId), buffer);
+}
+
+async function readSalesBlob(datasetId: string): Promise<Buffer | null> {
+  if (USE_BLOB) {
+    const { blobs } = await list({ prefix: salesBlobKey(datasetId), limit: 5, token: BLOB_TOKEN });
+    const hit = blobs.find((b) => b.pathname === salesBlobKey(datasetId));
+    if (!hit) return null;
+    const res = await fetch(hit.url);
+    if (!res.ok) return null;
+    return Buffer.from(await res.arrayBuffer());
+  }
+  try {
+    return await readFile(localSalesPath(datasetId));
+  } catch {
+    return null;
+  }
+}
+
+function salesNeedsReparsing(dataset: ReportDataset): boolean {
+  const version = dataset.meta.salesSchemaVersion ?? 1;
+  if (version >= SALES_SCHEMA_VERSION) return false;
+  if (dataset.sales.length === 0) return false;
+  const sample = dataset.sales[0];
+  if (!("productCategory" in sample)) return true;
+  const categories = new Set(dataset.sales.map((r) => r.productCategory));
+  const lines = new Set(dataset.sales.map((r) => r.productLine));
+  return categories.size === 1 && categories.has("Khác") && lines.size > 2;
+}
+
+async function maybeRefreshSales(dataset: ReportDataset): Promise<ReportDataset> {
+  if (!salesNeedsReparsing(dataset)) return dataset;
+  const salesBuffer = await readSalesBlob(dataset.meta.datasetId);
+  if (!salesBuffer) return dataset;
+  return refreshSalesFromSource(dataset, salesBuffer);
+}
+
+async function refreshSalesFromSource(
+  dataset: ReportDataset,
+  salesBuffer: Buffer,
+): Promise<ReportDataset> {
+  const salesParsed = parseSalesBuffer(salesBuffer, dataset.meta.salesFilename);
+  dataset.sales = salesParsed.rows;
+  dataset.meta.rowCount = salesParsed.rows.length;
+  dataset.meta.dates = salesParsed.dates;
+  dataset.meta.productLines = salesParsed.productLines;
+  dataset.meta.storeCode = salesParsed.storeCode;
+  dataset.meta.salesSchemaVersion = SALES_SCHEMA_VERSION;
+  await saveReportDataset(dataset);
+  return dataset;
 }
 
 async function ensureCache() {
@@ -90,12 +232,12 @@ export async function savePersistedTarget(
   const persisted: PersistedTarget = {
     filename,
     updatedAt: new Date().toISOString(),
-    target,
+    target: normalizeTarget(target, filename),
   };
   const payload = JSON.stringify(persisted);
 
   if (USE_BLOB) {
-    await writeJsonBlob(targetBlobKey(), payload);
+    await writeJsonBlob(targetJsonBlobKey(), payload);
   } else {
     await ensureCache();
     await writeFile(localTargetPath(), payload, "utf-8");
@@ -104,15 +246,36 @@ export async function savePersistedTarget(
   return persisted;
 }
 
+async function savePersistedTargetWithBuffer(
+  target: TargetData,
+  filename: string,
+  targetBuffer?: Buffer | null,
+): Promise<PersistedTarget> {
+  const persisted = await savePersistedTarget(target, filename);
+  if (targetBuffer) {
+    await writeTargetBlob(targetBuffer);
+  }
+  return persisted;
+}
+
 export async function loadPersistedTarget(): Promise<PersistedTarget | null> {
   if (USE_BLOB) {
-    const data = await readJsonBlob(targetBlobKey());
-    return (data as PersistedTarget | null) ?? null;
+    const data = await readJsonBlob(targetJsonBlobKey());
+    const parsed = (data as PersistedTarget | null) ?? null;
+    if (!parsed) return null;
+    return {
+      ...parsed,
+      target: normalizeTarget(parsed.target, parsed.filename),
+    };
   }
 
   try {
     const raw = await readFile(localTargetPath(), "utf-8");
-    return JSON.parse(raw) as PersistedTarget;
+    const parsed = JSON.parse(raw) as PersistedTarget;
+    return {
+      ...parsed,
+      target: normalizeTarget(parsed.target, parsed.filename),
+    };
   } catch {
     return null;
   }
@@ -132,18 +295,25 @@ export async function saveReportDataset(dataset: ReportDataset): Promise<void> {
 }
 
 export async function loadReportDataset(datasetId: string): Promise<ReportDataset> {
+  let dataset: ReportDataset;
+
   if (USE_BLOB) {
     const data = await readJsonBlob(blobKey(datasetId));
     if (!data) throw new Error(`Dataset '${datasetId}' not found`);
-    return data as ReportDataset;
+    dataset = data as ReportDataset;
+  } else {
+    try {
+      const raw = await readFile(localPath(datasetId), "utf-8");
+      dataset = JSON.parse(raw) as ReportDataset;
+    } catch {
+      throw new Error(`Dataset '${datasetId}' not found. Vui lòng upload lại.`);
+    }
   }
 
-  try {
-    const raw = await readFile(localPath(datasetId), "utf-8");
-    return JSON.parse(raw) as ReportDataset;
-  } catch {
-    throw new Error(`Dataset '${datasetId}' not found. Vui lòng upload lại.`);
-  }
+  dataset = await maybeRefreshSales(dataset);
+  dataset = await maybeRefreshTarget(dataset);
+  dataset.target = normalizeTarget(dataset.target, dataset.meta.targetFilename);
+  return dataset;
 }
 
 export async function reportDatasetExists(datasetId: string): Promise<boolean> {
@@ -171,15 +341,15 @@ export async function createReportDataset(opts: {
   let targetFilename: string;
 
   if (opts.targetBuffer && opts.targetFilename) {
-    target = parseTargetBuffer(opts.targetBuffer, opts.targetFilename);
+    target = normalizeTarget(parseTargetBuffer(opts.targetBuffer, opts.targetFilename), opts.targetFilename);
     targetFilename = opts.targetFilename;
-    await savePersistedTarget(target, targetFilename);
+    await savePersistedTargetWithBuffer(target, targetFilename, opts.targetBuffer);
   } else {
     const saved = await loadPersistedTarget();
     if (!saved) {
       throw new Error("Chưa có file chỉ tiêu. Vui lòng upload file target.");
     }
-    target = saved.target;
+    target = normalizeTarget(saved.target, saved.filename);
     targetFilename = saved.filename;
   }
 
@@ -196,6 +366,7 @@ export async function createReportDataset(opts: {
     targetColumns: target.columns,
     storeCode: salesParsed.storeCode,
     createdAt: new Date().toISOString(),
+    salesSchemaVersion: SALES_SCHEMA_VERSION,
   };
 
   const dataset: ReportDataset = {
@@ -205,6 +376,7 @@ export async function createReportDataset(opts: {
     groupConfig: config,
   };
 
+  await writeSalesBlob(datasetId, opts.salesBuffer);
   await saveReportDataset(dataset);
   return dataset;
 }
@@ -214,8 +386,8 @@ export async function replacePersistedTarget(
   targetFilename: string,
   datasetId?: string | null,
 ): Promise<{ persisted: PersistedTarget; dataset: ReportDataset | null }> {
-  const target = parseTargetBuffer(targetBuffer, targetFilename);
-  const persisted = await savePersistedTarget(target, targetFilename);
+  const target = normalizeTarget(parseTargetBuffer(targetBuffer, targetFilename), targetFilename);
+  const persisted = await savePersistedTargetWithBuffer(target, targetFilename, targetBuffer);
 
   if (!datasetId) {
     return { persisted, dataset: null };
@@ -235,6 +407,7 @@ export async function updateGroupConfig(
   groupConfig: GroupConfig,
 ): Promise<ReportDataset> {
   const dataset = await loadReportDataset(datasetId);
+  dataset.target = normalizeTarget(dataset.target, dataset.meta.targetFilename);
   dataset.groupConfig = groupConfig;
   await saveReportDataset(dataset);
   return dataset;

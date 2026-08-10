@@ -39,7 +39,7 @@ function FileDrop({
   return (
     <label
       className={cn(
-        "soft-card flex cursor-pointer flex-col items-center gap-3 px-6 py-10 text-center transition-all",
+        "soft-card flex w-full min-w-0 cursor-pointer flex-col items-center gap-3 overflow-hidden px-6 py-10 text-center transition-all",
         dragging ? "ring-2 ring-primary/40" : "hover:ring-2 hover:ring-lavender",
       )}
       onDragOver={(e) => {
@@ -57,12 +57,15 @@ function FileDrop({
       <span className={cn("flex h-14 w-14 items-center justify-center rounded-full", iconBg)}>
         <Icon className="h-7 w-7" />
       </span>
-      <div>
+      <div className="w-full min-w-0">
         <p className="text-base font-medium text-foreground">{label}</p>
         <p className="mt-1 text-sm text-muted-foreground">{hint}</p>
       </div>
       {file ? (
-        <p className="max-w-full truncate rounded-full bg-lavender-soft px-4 py-1.5 text-sm font-medium text-primary">
+        <p
+          className="w-full min-w-0 truncate rounded-full bg-lavender-soft px-4 py-1.5 text-sm font-medium text-primary"
+          title={file.name}
+        >
           {file.name}
         </p>
       ) : (
@@ -152,7 +155,7 @@ export function UploadScreen() {
           mới.
         </p>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-2">
+        <div className="mt-10 grid min-w-0 gap-5 md:grid-cols-2">
           <FileDrop
             label="Doanh số"
             hint="File export bán hàng (có Ngay, Dòng sản phẩm, Thành tiền)"
@@ -164,7 +167,7 @@ export function UploadScreen() {
           />
 
           {needTargetFile ? (
-            <div className="flex flex-col gap-3">
+            <div className="flex min-w-0 flex-col gap-3">
               <FileDrop
                 label={hasSavedTarget ? "Chỉ tiêu mới" : "Chỉ tiêu"}
                 hint="File target tháng (có hàng TỔNG) — sẽ được lưu lại"
@@ -179,23 +182,33 @@ export function UploadScreen() {
                   type="button"
                   variant="ghost"
                   size="sm"
+                  className="h-auto max-w-full flex-col gap-0.5 py-2"
                   onClick={() => {
                     setReplaceTarget(false);
                     setTarget(null);
                   }}
                 >
-                  Giữ file đang lưu ({savedTarget?.filename})
+                  <span>Giữ file đang lưu</span>
+                  <span
+                    className="max-w-full truncate text-xs font-normal text-muted-foreground"
+                    title={savedTarget?.filename}
+                  >
+                    {savedTarget?.filename}
+                  </span>
                 </Button>
               )}
             </div>
           ) : (
-            <div className="soft-card flex flex-col items-center justify-center gap-3 px-6 py-10 text-center">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-coral-soft text-coral">
+            <div className="soft-card flex w-full min-w-0 flex-col items-center justify-center gap-3 overflow-hidden px-6 py-10 text-center">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-coral-soft text-coral">
                 <Target className="h-7 w-7" />
               </span>
-              <div>
+              <div className="w-full min-w-0">
                 <p className="font-medium text-foreground">Chỉ tiêu đã lưu</p>
-                <p className="mt-1 max-w-full truncate text-sm font-medium text-primary">
+                <p
+                  className="mt-1 w-full min-w-0 truncate text-sm font-medium text-primary"
+                  title={savedTarget?.filename}
+                >
                   {savedTarget?.filename}
                 </p>
                 {savedTarget?.updatedAt && (

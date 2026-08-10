@@ -1,7 +1,10 @@
 import type {
+  CategoryBreakdown,
   DailyCompactRow,
   DayReport,
+  EmployeePerformance,
   GroupConfig,
+  MonthKpiSummary,
   ReportDatasetMeta,
   SavedTargetMeta,
   UploadReportResponse,
@@ -64,7 +67,13 @@ export async function uploadReportFiles(
 export async function fetchDayReport(
   datasetId: string,
   date?: string | null,
-): Promise<{ meta: ReportDatasetMeta; groupConfig: GroupConfig; report: DayReport }> {
+): Promise<{
+  meta: ReportDatasetMeta;
+  groupConfig: GroupConfig;
+  report: DayReport;
+  categoryBreakdown: CategoryBreakdown;
+  employeePerformance: EmployeePerformance;
+}> {
   const params = new URLSearchParams({ datasetId, mode: "day" });
   if (date) params.set("date", date);
   const res = await fetch(`/api/report/summary?${params}`);
@@ -73,12 +82,21 @@ export async function fetchDayReport(
     meta: ReportDatasetMeta;
     groupConfig: GroupConfig;
     report: DayReport;
+    categoryBreakdown: CategoryBreakdown;
+    employeePerformance: EmployeePerformance;
   };
 }
 
 export async function fetchDailySeries(
   datasetId: string,
-): Promise<{ meta: ReportDatasetMeta; groupConfig: GroupConfig; series: DailyCompactRow[] }> {
+): Promise<{
+  meta: ReportDatasetMeta;
+  groupConfig: GroupConfig;
+  series: DailyCompactRow[];
+  monthKpi: MonthKpiSummary | null;
+  categoryBreakdown: CategoryBreakdown;
+  employeePerformance: EmployeePerformance;
+}> {
   const params = new URLSearchParams({ datasetId, mode: "series" });
   const res = await fetch(`/api/report/summary?${params}`);
   if (!res.ok) throw new Error(await readError(res));
@@ -86,6 +104,9 @@ export async function fetchDailySeries(
     meta: ReportDatasetMeta;
     groupConfig: GroupConfig;
     series: DailyCompactRow[];
+    monthKpi: MonthKpiSummary | null;
+    categoryBreakdown: CategoryBreakdown;
+    employeePerformance: EmployeePerformance;
   };
 }
 

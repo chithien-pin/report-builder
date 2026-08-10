@@ -4,14 +4,17 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import type {
+  CategoryBreakdown,
   DailyCompactRow,
   DayReport,
+  EmployeePerformance,
   GroupConfig,
+  MonthKpiSummary,
   ReportDatasetMeta,
   SavedTargetMeta,
 } from "@/lib/report/types";
 
-export type ReportViewMode = "day" | "all";
+export type ReportViewMode = "overview" | "day";
 
 interface ReportState {
   datasetId: string | null;
@@ -21,7 +24,10 @@ interface ReportState {
   selectedDate: string | null;
   viewMode: ReportViewMode;
   dayReport: DayReport | null;
+  categoryBreakdown: CategoryBreakdown | null;
+  employeePerformance: EmployeePerformance | null;
   series: DailyCompactRow[];
+  monthKpi: MonthKpiSummary | null;
   loading: boolean;
   error: string | null;
 
@@ -35,7 +41,10 @@ interface ReportState {
   setSelectedDate: (date: string) => void;
   setViewMode: (mode: ReportViewMode) => void;
   setDayReport: (report: DayReport | null) => void;
+  setCategoryBreakdown: (breakdown: CategoryBreakdown | null) => void;
+  setEmployeePerformance: (performance: EmployeePerformance | null) => void;
   setSeries: (series: DailyCompactRow[]) => void;
+  setMonthKpi: (kpi: MonthKpiSummary | null) => void;
   setGroupConfig: (config: GroupConfig) => void;
   setMeta: (meta: ReportDatasetMeta) => void;
   setLoading: (loading: boolean) => void;
@@ -51,9 +60,12 @@ const initial = {
   groupConfig: null as GroupConfig | null,
   savedTarget: null as SavedTargetMeta | null,
   selectedDate: null as string | null,
-  viewMode: "day" as ReportViewMode,
+  viewMode: "overview" as ReportViewMode,
   dayReport: null as DayReport | null,
+  categoryBreakdown: null as CategoryBreakdown | null,
+  employeePerformance: null as EmployeePerformance | null,
   series: [] as DailyCompactRow[],
+  monthKpi: null as MonthKpiSummary | null,
   loading: false,
   error: null as string | null,
 };
@@ -70,9 +82,12 @@ export const useReportStore = create<ReportState>()(
           groupConfig,
           savedTarget: savedTarget ?? state.savedTarget,
           selectedDate: meta.dates[meta.dates.length - 1] ?? null,
-          viewMode: "day",
+          viewMode: "overview",
           dayReport: null,
+          categoryBreakdown: null,
+          employeePerformance: null,
           series: [],
+          monthKpi: null,
           error: null,
         })),
 
@@ -80,7 +95,10 @@ export const useReportStore = create<ReportState>()(
       setSelectedDate: (date) => set({ selectedDate: date }),
       setViewMode: (mode) => set({ viewMode: mode }),
       setDayReport: (report) => set({ dayReport: report }),
+      setCategoryBreakdown: (breakdown) => set({ categoryBreakdown: breakdown }),
+      setEmployeePerformance: (performance) => set({ employeePerformance: performance }),
       setSeries: (series) => set({ series }),
+      setMonthKpi: (kpi) => set({ monthKpi: kpi }),
       setGroupConfig: (config) => set({ groupConfig: config }),
       setMeta: (meta) => set({ meta }),
       setLoading: (loading) => set({ loading }),
@@ -96,7 +114,14 @@ export const useReportStore = create<ReportState>()(
     }),
     {
       name: "reportbtmh-bao-cao-ngay",
-      version: 2,
+      version: 3,
+      migrate: (persisted, version) => {
+        const state = persisted as { viewMode?: string };
+        if (version < 3 && state.viewMode === "all") {
+          state.viewMode = "overview";
+        }
+        return persisted as typeof initial;
+      },
       partialize: (state) => ({
         datasetId: state.datasetId,
         meta: state.meta,

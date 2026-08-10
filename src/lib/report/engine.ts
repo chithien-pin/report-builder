@@ -9,9 +9,11 @@ import type {
   GroupConfig,
   GroupDayMetrics,
   MetricActual,
+  MonthKpiSummary,
   ReportGroup,
   SalesRow,
   TargetData,
+  TargetWeekPeriod,
 } from "./types";
 
 function round(n: number, digits = 4): number {
@@ -24,9 +26,10 @@ function buildMetric(
   cumulativeActual: number,
   monthTarget: number,
   date: string,
+  weekPeriods: TargetWeekPeriod[],
 ): MetricActual {
-  const target = dailyTargetFromMonth(monthTarget, date);
-  const cumulativeTarget = cumulativeTargetFromMonth(monthTarget, date);
+  const target = dailyTargetFromMonth(monthTarget, date, weekPeriods);
+  const cumulativeTarget = cumulativeTargetFromMonth(monthTarget, date, weekPeriods);
   const a = round(actual);
   const ca = round(cumulativeActual);
   return {
@@ -117,6 +120,7 @@ export function buildDayReport(
   }
 
   const dayMap = byDate.get(date) ?? new Map<string, Acc>();
+  const weekPeriods = target.weekPeriods;
 
   const groups: GroupDayMetrics[] = config.groups.map((g) => {
     const day = dayMap.get(g.id) ?? { sl: 0, dt: 0 };
@@ -126,8 +130,8 @@ export function buildDayReport(
     return {
       groupId: g.id,
       groupName: g.name,
-      sl: buildMetric(day.sl, cum.sl, monthSl, date),
-      dt: buildMetric(day.dt, cum.dt, monthDt, date),
+      sl: buildMetric(day.sl, cum.sl, monthSl, date, weekPeriods),
+      dt: buildMetric(day.dt, cum.dt, monthDt, date, weekPeriods),
     };
   });
 
@@ -148,8 +152,8 @@ export function buildDayReport(
   const total: GroupDayMetrics = {
     groupId: "tong",
     groupName: "TỔNG",
-    sl: buildMetric(totalDay.sl, totalCum.sl, totalMonthSl, date),
-    dt: buildMetric(totalDay.dt, totalCum.dt, totalMonthDt, date),
+    sl: buildMetric(totalDay.sl, totalCum.sl, totalMonthSl, date, weekPeriods),
+    dt: buildMetric(totalDay.dt, totalCum.dt, totalMonthDt, date, weekPeriods),
   };
 
   return { date, groups, total };
@@ -173,6 +177,28 @@ export function buildDailySeries(
       dtPct: report.total.dt.pct,
     };
   });
+}
+
+/** Month KPI through the latest date in sales data (cumulative actual vs month target). */
+export function buildMonthKpi(
+  sales: SalesRow[],
+  target: TargetData,
+  config: GroupConfig,
+): MonthKpiSummary | null {
+  const dates = [...new Set(sales.map((r) => r.date))].sort();
+  const lastDate = dates[dates.length - 1];
+  if (!lastDate) return null;
+
+  const report = buildDayReport(sales, target, config, lastDate);
+  return {
+    asOfDate: lastDate,
+    slActual: report.total.sl.cumulativeActual,
+    slTarget: report.total.sl.monthTarget,
+    slPct: report.total.sl.monthPct,
+    dtActual: report.total.dt.cumulativeActual,
+    dtTarget: report.total.dt.monthTarget,
+    dtPct: report.total.dt.monthPct,
+  };
 }
 
 export function allProductLinesUsed(config: GroupConfig): Set<string> {

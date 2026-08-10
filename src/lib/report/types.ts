@@ -22,9 +22,15 @@ export interface GroupConfig {
 export interface SalesRow {
   date: string; // YYYY-MM-DD
   productLine: string;
+  productCategory: string;
+  employeeName: string;
+  orderId: string | null;
   quantity: number;
   goldWeight: number;
+  grossAmount: number;
+  netRevenue: number;
   revenue: number;
+  grossProfit: number;
 }
 
 export interface TargetColumn {
@@ -33,10 +39,57 @@ export interface TargetColumn {
   kind: "dt" | "sl" | "other";
 }
 
+export interface TargetWeekPeriod {
+  label: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;
+  pct: number;
+  days: number;
+}
+
 export interface TargetData {
   columns: TargetColumn[];
   /** Month totals keyed by column key (from TỔNG row) */
   monthTotals: Record<string, number>;
+  /** Custom week buckets with explicit date ranges (not calendar weeks). */
+  weekPeriods: TargetWeekPeriod[];
+  /** Plan month YYYY-MM inferred from filename or sheet. */
+  planMonth: string;
+  /** Per-employee plan from target file (DT kế hoạch + SL tính lương). */
+  employeePlans: EmployeeTargetPlan[];
+}
+
+export interface EmployeeTargetPlan {
+  code: string;
+  name: string;
+  dtPlan: number;
+  slPayroll: number;
+  dtBreakdown: { label: string; value: number }[];
+  slBreakdown: { label: string; value: number }[];
+}
+
+export interface EmployeeTargetBreakdownRow {
+  label: string;
+  dtActual: number;
+  dtPlan: number;
+  slActual: number;
+  slPlan: number;
+}
+
+export interface EmployeeTargetDetail {
+  name: string;
+  code: string | null;
+  asOfDate: string;
+  dtActual: number;
+  dtPlan: number;
+  dtPct: number | null;
+  dtRemaining: number;
+  slActual: number;
+  slPlan: number;
+  slPct: number | null;
+  slRemaining: number;
+  breakdown: EmployeeTargetBreakdownRow[];
+  suggestions: string[];
 }
 
 /** Persisted monthly target (reusable across sales uploads) */
@@ -87,6 +140,81 @@ export interface DailyCompactRow {
   dtPct: number | null;
 }
 
+export interface MonthKpiSummary {
+  slActual: number;
+  slTarget: number;
+  slPct: number | null;
+  dtActual: number;
+  dtTarget: number;
+  dtPct: number | null;
+  asOfDate: string;
+}
+
+export interface CategoryBreakdownRow {
+  category: string;
+  revenue: number;
+  sharePct: number;
+  orderCount: number;
+  grossProfit: number;
+  cumulativeRevenue: number;
+  monthTarget: number;
+  /** DT lũy kế / chỉ tiêu tháng */
+  cumulativePct: number | null;
+}
+
+export interface CategoryBreakdown {
+  grossTotal: number;
+  netRevenue: number;
+  variancePct: number | null;
+  goldWeightTotal: number;
+  asOfDate: string;
+  cumulativeRevenue: number;
+  monthTarget: number;
+  /** DT lũy kế / chỉ tiêu tháng */
+  cumulativePct: number | null;
+  categories: CategoryBreakdownRow[];
+}
+
+export interface EmployeePerformanceRow {
+  name: string;
+  revenue: number;
+  revenueSharePct: number;
+  orderCount: number;
+  orderSharePct: number;
+  aov: number;
+  itemsPerOrder: number;
+  grossProfit: number;
+  marginPct: number;
+  revenueRatio: number;
+  orderRatio: number;
+}
+
+export type EmployeeInsightKind =
+  | "top-upsell"
+  | "balanced"
+  | "high-margin"
+  | "needs-support";
+
+export interface EmployeeInsight {
+  kind: EmployeeInsightKind;
+  name: string;
+  revenueRatio: number;
+  orderRatio: number;
+  marginPct?: number;
+  aov?: number;
+  caption: string;
+  medal?: "gold" | "silver";
+}
+
+export interface EmployeePerformance {
+  employees: EmployeePerformanceRow[];
+  insights: EmployeeInsight[];
+  targetDetails: EmployeeTargetDetail[];
+  asOfDate: string;
+}
+
+export const SALES_SCHEMA_VERSION = 3;
+
 export interface ReportDatasetMeta {
   datasetId: string;
   salesFilename: string;
@@ -97,6 +225,7 @@ export interface ReportDatasetMeta {
   targetColumns: TargetColumn[];
   storeCode: string | null;
   createdAt: string;
+  salesSchemaVersion?: number;
 }
 
 export interface ReportDataset {

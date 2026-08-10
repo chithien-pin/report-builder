@@ -1,7 +1,8 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
-import type { SalesRow, TargetColumn, TargetData } from "./types";
+import type { SalesRow, TargetColumn, TargetData, EmployeeTargetPlan } from "./types";
+import { resolveWeekPeriods } from "./week-periods";
 
 function excelSerialToIso(serial: number): string | null {
   if (!Number.isFinite(serial) || serial < 30000 || serial >= 100000) return null;
@@ -24,16 +25,21 @@ function toNumber(value: unknown): number {
   return parseVnNumber(String(value));
 }
 
+function normKey(value: string): string {
+  return value.trim().normalize("NFC").toLowerCase();
+}
+
 function pick(row: Record<string, unknown>, ...names: string[]): unknown {
   const keys = Object.keys(row);
+  const normalized = new Map(keys.map((k) => [normKey(k), k]));
   for (const name of names) {
-    const hit = keys.find((k) => k.trim().toLowerCase() === name.toLowerCase());
+    const hit = normalized.get(normKey(name));
     if (hit != null) return row[hit];
   }
   // fuzzy
   for (const name of names) {
-    const needle = name.toLowerCase();
-    const hit = keys.find((k) => k.trim().toLowerCase().includes(needle));
+    const needle = normKey(name);
+    const hit = keys.find((k) => normKey(k).includes(needle));
     if (hit != null) return row[hit];
   }
   return null;
@@ -83,19 +89,49 @@ export function parseSalesBuffer(content: Buffer, filename: string): {
     ).trim();
     if (!productLine || productLine.toLowerCase() === "total") continue;
 
+    const productCategoryRaw = pick(
+      row,
+      "Danh mục sản phẩm",
+      "Danh muc san pham",
+      "DANH MUC SAN PHAM",
+      "Danh mục SP",
+      "Danh muc SP",
+    );
+    const productCategory =
+      String(productCategoryRaw ?? "").trim() || "Khác";
+    const orderRaw = pick(row, "ID PT", "ID_PT");
+    const orderId = orderRaw != null && String(orderRaw).trim() ? String(orderRaw).trim() : null;
+    const employeeRaw = pick(row, "TEN NV QUAY", "Ten NV quay", "Tên NV quầy", "Nhan vien");
+    const employeeName = String(employeeRaw ?? "").trim() || "Không xác định";
+
     const quantity = toNumber(pick(row, "SO LUONG", "Số lượng", "So luong"));
     const goldWeight = toNumber(
       pick(row, "TRONG LUONG VANG", "Trọng lượng vàng", "TONG TRONG LUONG"),
     );
-    let revenue = toNumber(pick(row, "THANH TIEN", "Thành tiền"));
-    if (!revenue) revenue = toNumber(pick(row, "DOANH THU THUAN", "Doanh thu thuần"));
+    const grossAmount = toNumber(pick(row, "THANH TIEN", "Thành tiền"));
+    let netRevenue = toNumber(pick(row, "DOANH THU THUAN", "Doanh thu thuần"));
+    const grossProfit = toNumber(pick(row, "Loi nhuan gop", "Lợi nhuận gộp"));
+    let revenue = grossAmount;
+    if (!revenue) revenue = netRevenue;
 
     if (!storeCode) {
       const sc = pick(row, "Ma CH", "Mã CH", "MA CH");
       if (sc) storeCode = String(sc);
     }
 
-    sales.push({ date, productLine, quantity, goldWeight, revenue });
+    sales.push({
+      date,
+      productLine,
+      productCategory,
+      employeeName,
+      orderId,
+      quantity,
+      goldWeight,
+      grossAmount,
+      netRevenue,
+      revenue,
+      grossProfit,
+    });
   }
 
   if (sales.length === 0) {
@@ -234,5 +270,71 @@ export function parseTargetBuffer(content: Buffer, filename: string): TargetData
     monthTotals[col.key] = parseVnNumber(tongRow[idx] ?? "0");
   }
 
-  return { columns, monthTotals };
+  const { planMonth, weekPeriods } = resolveWeekPeriods(matrix, filename);
+  const employeePlans = parseEmployeePlans(matrix, headerIdx, sectionRow, headerRow);
+
+  return { columns, monthTotals, weekPeriods, planMonth, employeePlans };
+}
+
+function parseEmployeePlans(
+  matrix: string[][],
+  headerIdx: number,
+  sectionRow: string[],
+  headerRow: string[],
+): EmployeeTargetPlan[] {
+  const nameIdx = headerRow.findIndex((h) => /tên nhân/i.test(h));
+  const codeIdx = headerRow.findIndex((h) => /mã nhân/i.test(h) || /ma nhan/i.test(h));
+
+  let dtTotalIdx = -1;
+  let slPayrollTotalIdx = -1;
+  const dtCols: { idx: number; label: string }[] = [];
+  const slCols: { idx: number; label: string }[] = [];
+
+  for (let i = 0; i < headerRow.length; i++) {
+    const section = sectionRow[i] || "";
+    const label = headerRow[i].replace(/\s+/g, " ").trim();
+    if (/doanh thu/i.test(section) && /^tổng$/i.test(label)) dtTotalIdx = i;
+    if (/tính lương/i.test(section) && /^tổng$/i.test(label)) slPayrollTotalIdx = i;
+    if (!label || /^tổng$/i.test(label)) continue;
+    if (/doanh thu/i.test(section) && !/tính lương/i.test(section)) {
+      dtCols.push({ idx: i, label });
+    }
+    if (/tính lương/i.test(section)) {
+      slCols.push({ idx: i, label: label.replace(/\n/g, " ") });
+    }
+  }
+
+  const plans: EmployeeTargetPlan[] = [];
+
+  for (let r = headerIdx + 1; r < matrix.length; r++) {
+    const row = matrix[r] ?? [];
+    const first = String(row[0] ?? "").trim().toUpperCase();
+    if (!first || first === "TỔNG" || first === "TONG") break;
+
+    const code = codeIdx >= 0 ? String(row[codeIdx] ?? "").trim() : "";
+    const name = nameIdx >= 0 ? String(row[nameIdx] ?? "").trim() : "";
+    if (!name) continue;
+
+    const dtPlan =
+      dtTotalIdx >= 0 ? parseVnNumber(String(row[dtTotalIdx] ?? "0")) : 0;
+    const slPayroll =
+      slPayrollTotalIdx >= 0 ? parseVnNumber(String(row[slPayrollTotalIdx] ?? "0")) : 0;
+
+    plans.push({
+      code,
+      name,
+      dtPlan,
+      slPayroll,
+      dtBreakdown: dtCols.map((c) => ({
+        label: c.label,
+        value: parseVnNumber(String(row[c.idx] ?? "0")),
+      })),
+      slBreakdown: slCols.map((c) => ({
+        label: c.label,
+        value: parseVnNumber(String(row[c.idx] ?? "0")),
+      })),
+    });
+  }
+
+  return plans;
 }

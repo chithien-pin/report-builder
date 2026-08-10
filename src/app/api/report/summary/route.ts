@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { buildDailySeries, buildDayReport } from "@/lib/report/engine";
+import { buildDailySeries, buildDayReport, buildMonthKpi } from "@/lib/report/engine";
+import { buildCategoryBreakdown } from "@/lib/report/category-breakdown";
+import { buildEmployeePerformance } from "@/lib/report/employee-performance";
 import { loadReportDataset, updateGroupConfig } from "@/lib/report/storage";
 import type { GroupConfig } from "@/lib/report/types";
 
@@ -22,10 +24,30 @@ export async function GET(req: NextRequest) {
 
     if (mode === "series") {
       const series = buildDailySeries(dataset.sales, dataset.target, dataset.groupConfig);
+      const monthKpi = buildMonthKpi(dataset.sales, dataset.target, dataset.groupConfig);
+      const lastDate = dataset.meta.dates[dataset.meta.dates.length - 1];
+      const asOfDate =
+        [...dataset.sales.map((r) => r.date)]
+          .filter((d) => d.startsWith(dataset.target.planMonth))
+          .sort()
+          .pop() ??
+        lastDate ??
+        dataset.target.planMonth + "-01";
+
+      const categoryBreakdown = buildCategoryBreakdown(dataset.sales, dataset.target, {
+        asOfDate,
+      });
+      const employeePerformance = buildEmployeePerformance(dataset.sales, {
+        asOfDate,
+        target: dataset.target,
+      });
       return NextResponse.json({
         meta: dataset.meta,
         groupConfig: dataset.groupConfig,
         series,
+        monthKpi,
+        categoryBreakdown,
+        employeePerformance,
       });
     }
 
@@ -44,11 +66,22 @@ export async function GET(req: NextRequest) {
       dataset.groupConfig,
       selected,
     );
+    const categoryBreakdown = buildCategoryBreakdown(dataset.sales, dataset.target, {
+      periodDate: selected,
+      asOfDate: selected,
+    });
+    const employeePerformance = buildEmployeePerformance(dataset.sales, {
+      periodDate: selected,
+      asOfDate: selected,
+      target: dataset.target,
+    });
 
     return NextResponse.json({
       meta: dataset.meta,
       groupConfig: dataset.groupConfig,
       report,
+      categoryBreakdown,
+      employeePerformance,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Load failed";
