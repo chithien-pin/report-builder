@@ -1,7 +1,7 @@
 import type { EmployeeTargetDetail, EmployeeTargetPlan, SalesRow } from "./types";
 import { pct } from "./targets";
 
-const CHI_CATEGORIES = new Set(["Vàng tích lũy", "Bạc tích lũy", "Nguyên liệu"]);
+type SlUnit = "chi" | "piece";
 
 function productCategoryToDtLabel(category: string): string {
   switch (category) {
@@ -16,6 +16,44 @@ function productCategoryToDtLabel(category: string): string {
   }
 }
 
+/** Đơn vị SL mặc định theo danh mục bán hàng (chỉ → trọng lượng vàng). */
+function defaultSlUnitForCategory(category: string): SlUnit {
+  switch (category) {
+    case "Vàng tích lũy":
+    case "Bạc tích lũy":
+    case "TS vàng ta":
+    case "Nguyên liệu":
+      return "chi";
+    default:
+      return "piece";
+  }
+}
+
+/** Đọc đơn vị từ nhãn cột target, ví dụ "Vàng TT (Chỉ)" hoặc "Trang sức khác (Chiếc)". */
+function slUnitFromBreakdownLabel(label: string): SlUnit {
+  const norm = label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (norm.includes("chiec")) return "piece";
+  if (norm.includes("chi")) return "chi";
+  return "chi";
+}
+
+function slUnitsByDtLabel(plan: EmployeeTargetPlan | null): Map<string, SlUnit> {
+  const map = new Map<string, SlUnit>();
+  if (!plan) return map;
+  plan.dtBreakdown.forEach((dt, idx) => {
+    const slLabel = plan.slBreakdown[idx]?.label ?? "";
+    map.set(dt.label, slUnitFromBreakdownLabel(slLabel));
+  });
+  return map;
+}
+
+function slForRow(r: SalesRow, unit: SlUnit): number {
+  return unit === "chi" ? r.goldWeight : r.quantity;
+}
+
 function normName(value: string): string {
   return value
     .normalize("NFC")
@@ -28,10 +66,13 @@ function rowRevenue(r: SalesRow): number {
   return r.netRevenue || r.grossAmount || r.revenue;
 }
 
-/** Sản lượng tính lương: chỉ (gold weight) + chiếc (quantity) theo danh mục. */
-export function payrollSlForRow(r: SalesRow): number {
-  const cat = r.productCategory || "Khác";
-  return CHI_CATEGORIES.has(cat) ? r.goldWeight : r.quantity;
+/** Sản lượng tính lương: chỉ (trọng lượng vàng) hoặc chiếc (số lượng) theo danh mục. */
+export function payrollSlForRow(r: SalesRow, slUnitsByLabel?: Map<string, SlUnit>): number {
+  const dtLabel = productCategoryToDtLabel(r.productCategory || "Khác");
+  const unit =
+    slUnitsByLabel?.get(dtLabel) ??
+    defaultSlUnitForCategory(r.productCategory || "Khác");
+  return slForRow(r, unit);
 }
 
 function findPlanByName(
@@ -129,13 +170,19 @@ export function buildEmployeeTargetDetails(
     const name = r.employeeName || "Không xác định";
     const prev = actualByName.get(name) ?? { dt: 0, sl: 0 };
     prev.dt += rowRevenue(r);
-    prev.sl += payrollSlForRow(r);
     actualByName.set(name, prev);
   }
 
   return employeeNames.map((name) => {
-    const actual = actualByName.get(name) ?? { dt: 0, sl: 0 };
     const plan = findPlanByName(plans, name);
+    const slUnits = slUnitsByDtLabel(plan);
+
+    const actual = actualByName.get(name) ?? { dt: 0, sl: 0 };
+    actual.sl = 0;
+    for (const r of planSales.filter((row) => (row.employeeName || "Không xác định") === name)) {
+      actual.sl += payrollSlForRow(r, slUnits);
+    }
+
     const dtPlan = plan?.dtPlan ?? 0;
     const slPlan = plan?.slPayroll ?? 0;
     const dtRemaining = Math.max(0, dtPlan - actual.dt);
@@ -145,8 +192,10 @@ export function buildEmployeeTargetDetails(
     const slByLabel = new Map<string, number>();
     for (const r of planSales.filter((row) => (row.employeeName || "Không xác định") === name)) {
       const label = productCategoryToDtLabel(r.productCategory || "Khác");
+      const unit =
+        slUnits.get(label) ?? defaultSlUnitForCategory(r.productCategory || "Khác");
       dtByLabel.set(label, (dtByLabel.get(label) ?? 0) + rowRevenue(r));
-      slByLabel.set(label, (slByLabel.get(label) ?? 0) + payrollSlForRow(r));
+      slByLabel.set(label, (slByLabel.get(label) ?? 0) + slForRow(r, unit));
     }
 
     const breakdown =

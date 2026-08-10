@@ -16,6 +16,14 @@ function formatDateVi(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+function isTrangSucKhacCategory(label: string): boolean {
+  return label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .includes("trang suc khac");
+}
+
 function TargetProgressBar({
   label,
   actual,
@@ -148,8 +156,10 @@ export function EmployeeDetailDialog({
                       </thead>
                       <tbody>
                         {detail.breakdown.map((row) => {
+                          const hideSl = isTrangSucKhacCategory(row.label);
                           const dtPctRow = row.dtPlan > 0 ? row.dtActual / row.dtPlan : null;
-                          const slPctRow = row.slPlan > 0 ? row.slActual / row.slPlan : null;
+                          const slPctRow =
+                            !hideSl && row.slPlan > 0 ? row.slActual / row.slPlan : null;
                           const weak =
                             (dtPctRow != null && dtPctRow < 0.7) ||
                             (slPctRow != null && slPctRow < 0.7);
@@ -176,17 +186,27 @@ export function EmployeeDetailDialog({
                               >
                                 {dtPctRow != null ? formatPctVi(dtPctRow) : "—"}
                               </td>
-                              <td className="px-3 py-2 text-right tabular-nums">
-                                <span className="font-bold text-foreground">{formatNumber(row.slActual)}</span>
-                                <span className="text-muted-foreground"> / {formatNumber(row.slPlan)}</span>
+                              <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                                {hideSl ? (
+                                  "—"
+                                ) : (
+                                  <>
+                                    <span className="font-bold text-foreground">{formatNumber(row.slActual)}</span>
+                                    <span className="text-muted-foreground"> / {formatNumber(row.slPlan)}</span>
+                                  </>
+                                )}
                               </td>
                               <td
                                 className={cn(
                                   "px-3 py-2 text-right font-bold tabular-nums",
-                                  slGood ? "text-success" : "text-coral",
+                                  hideSl
+                                    ? "text-muted-foreground"
+                                    : slGood
+                                      ? "text-success"
+                                      : "text-coral",
                                 )}
                               >
-                                {slPctRow != null ? formatPctVi(slPctRow) : "—"}
+                                {hideSl ? "—" : slPctRow != null ? formatPctVi(slPctRow) : "—"}
                               </td>
                             </tr>
                           );
