@@ -117,7 +117,7 @@ export function EmployeePerformanceCard({
             )}
           </div>
           <p className="mt-1.5 text-xs text-muted-foreground">
-            Bấm vào nhân viên để xem chi tiết chỉ tiêu DT kế hoạch & SL tính lương
+            Bấm vào nhân viên để xem chi tiết chỉ tiêu, sản lượng và hoa hồng dự kiến
           </p>
         </div>
 

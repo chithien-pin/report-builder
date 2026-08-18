@@ -3,8 +3,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { createDefaultCommissionConfig } from "@/lib/report/commission-defaults";
 import type {
   CategoryBreakdown,
+  CommissionConfig,
   DailyCompactRow,
   DayReport,
   EmployeePerformance,
@@ -30,6 +32,7 @@ interface ReportState {
   monthKpi: MonthKpiSummary | null;
   loading: boolean;
   error: string | null;
+  commissionConfig: CommissionConfig;
 
   setUploadResult: (
     datasetId: string,
@@ -46,10 +49,11 @@ interface ReportState {
   setSeries: (series: DailyCompactRow[]) => void;
   setMonthKpi: (kpi: MonthKpiSummary | null) => void;
   setGroupConfig: (config: GroupConfig) => void;
+  setCommissionConfig: (config: CommissionConfig) => void;
   setMeta: (meta: ReportDatasetMeta) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  /** Clear sales report only — keep saved target */
+  /** Clear sales report only — keep saved target and commission config */
   clearSales: () => void;
   reset: () => void;
 }
@@ -68,6 +72,7 @@ const initial = {
   monthKpi: null as MonthKpiSummary | null,
   loading: false,
   error: null as string | null,
+  commissionConfig: createDefaultCommissionConfig(),
 };
 
 export const useReportStore = create<ReportState>()(
@@ -100,6 +105,7 @@ export const useReportStore = create<ReportState>()(
       setSeries: (series) => set({ series }),
       setMonthKpi: (kpi) => set({ monthKpi: kpi }),
       setGroupConfig: (config) => set({ groupConfig: config }),
+      setCommissionConfig: (config) => set({ commissionConfig: config }),
       setMeta: (meta) => set({ meta }),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
@@ -108,17 +114,28 @@ export const useReportStore = create<ReportState>()(
         set((state) => ({
           ...initial,
           savedTarget: state.savedTarget,
+          commissionConfig: state.commissionConfig,
         })),
 
-      reset: () => set({ ...initial }),
+      reset: () =>
+        set((state) => ({
+          ...initial,
+          commissionConfig: state.commissionConfig,
+        })),
     }),
     {
       name: "reportbtmh-bao-cao-ngay",
-      version: 3,
+      version: 4,
       migrate: (persisted, version) => {
-        const state = persisted as { viewMode?: string };
+        const state = persisted as {
+          viewMode?: string;
+          commissionConfig?: CommissionConfig;
+        };
         if (version < 3 && state.viewMode === "all") {
           state.viewMode = "overview";
+        }
+        if (version < 4 || !state.commissionConfig) {
+          state.commissionConfig = createDefaultCommissionConfig();
         }
         return persisted as typeof initial;
       },
@@ -129,6 +146,7 @@ export const useReportStore = create<ReportState>()(
         savedTarget: state.savedTarget,
         selectedDate: state.selectedDate,
         viewMode: state.viewMode,
+        commissionConfig: state.commissionConfig,
       }),
     },
   ),

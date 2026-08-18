@@ -61,6 +61,14 @@ export function resolveCategoryTargetColumn(
   return findColumn(target.columns, hints, "dt");
 }
 
+export function resolveCategorySlColumn(
+  category: string,
+  target: TargetData,
+): string | null {
+  const hints = CATEGORY_TARGET_HINTS[category] ?? FALLBACK_HINTS;
+  return findColumn(target.columns, hints, "sl");
+}
+
 export function monthTargetForCategory(category: string, target: TargetData): number {
   const key = resolveCategoryTargetColumn(category, target);
   if (!key) return 0;

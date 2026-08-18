@@ -70,6 +70,18 @@ export function CategoryBreakdownCard({
             <CumulativePctCell value={data.cumulativePct} />
           </p>
         )}
+        {data.slMonthTarget > 0 && (
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sản lượng lũy kế:{" "}
+            <span className="font-medium text-foreground">
+              {formatNumber(data.cumulativeGoldWeight)} chỉ
+            </span>
+            {" / "}
+            <span className="font-medium text-coral">CT {formatNumber(data.slMonthTarget)} chỉ</span>
+            {" · "}
+            <CumulativePctCell value={data.cumulativeSlPct} />
+          </p>
+        )}
       </div>
 
       <div className="px-5 py-4">
@@ -96,13 +108,16 @@ export function CategoryBreakdownCard({
       </div>
 
       <div className="overflow-auto px-2 pb-2">
-        <table className="min-w-[760px] w-full border-collapse text-sm">
+        <table className="min-w-[960px] w-full border-collapse text-sm">
           <thead>
             <tr className="bg-lavender-soft text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-3 py-2.5 font-medium">Danh mục</th>
               <th className="px-3 py-2.5 text-right font-medium">Doanh thu</th>
               <th className="px-3 py-2.5 text-right font-medium">Tỷ trọng</th>
               <th className="px-3 py-2.5 text-right font-medium">% Lũy kế CT</th>
+              <th className="px-3 py-2.5 text-right font-medium">Sản lượng</th>
+              <th className="px-3 py-2.5 text-right font-medium">SL lũy kế</th>
+              <th className="px-3 py-2.5 text-right font-medium">% Lũy kế SL</th>
               <th className="px-3 py-2.5 text-right font-medium">Số đơn</th>
               <th className="px-3 py-2.5 text-right font-medium">LN gộp</th>
             </tr>
@@ -111,6 +126,8 @@ export function CategoryBreakdownCard({
             {data.categories.map((row, idx) => {
               const emphasize = idx < 3;
               const negative = row.grossProfit < 0;
+              const slActual = row.slUnit === "chi" ? row.goldWeight : row.quantity;
+              const slSuffix = row.slUnit === "chi" ? " chỉ" : "";
               return (
                 <tr
                   key={row.category}
@@ -125,6 +142,35 @@ export function CategoryBreakdownCard({
                   </td>
                   <td className={cn("px-3 py-2.5 text-right", emphasize && "font-bold")}>
                     <CumulativePctCell value={row.cumulativePct} />
+                  </td>
+                  <td className={cn("px-3 py-2.5 text-right tabular-nums", emphasize && "font-bold")}>
+                    {row.hideSl ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      `${formatNumber(slActual)}${slSuffix}`
+                    )}
+                  </td>
+                  <td className={cn("px-3 py-2.5 text-right tabular-nums", emphasize && "font-bold")}>
+                    {row.hideSl ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <>
+                        <span className="font-medium">{formatNumber(row.cumulativeSl)}</span>
+                        {row.slMonthTarget > 0 && (
+                          <span className="text-muted-foreground">
+                            {" / "}
+                            {formatNumber(row.slMonthTarget)}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </td>
+                  <td className={cn("px-3 py-2.5 text-right", emphasize && "font-bold")}>
+                    {row.hideSl ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <CumulativePctCell value={row.cumulativeSlPct} />
+                    )}
                   </td>
                   <td className={cn("px-3 py-2.5 text-right tabular-nums", emphasize && "font-bold")}>
                     {row.orderCount}

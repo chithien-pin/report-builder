@@ -160,6 +160,14 @@ export interface CategoryBreakdownRow {
   monthTarget: number;
   /** DT lũy kế / chỉ tiêu tháng */
   cumulativePct: number | null;
+  goldWeight: number;
+  quantity: number;
+  slUnit: "chi" | "piece";
+  hideSl: boolean;
+  cumulativeSl: number;
+  slMonthTarget: number;
+  /** SL lũy kế / chỉ tiêu SL tháng */
+  cumulativeSlPct: number | null;
 }
 
 export interface CategoryBreakdown {
@@ -167,11 +175,15 @@ export interface CategoryBreakdown {
   netRevenue: number;
   variancePct: number | null;
   goldWeightTotal: number;
+  quantityTotal: number;
   asOfDate: string;
   cumulativeRevenue: number;
   monthTarget: number;
   /** DT lũy kế / chỉ tiêu tháng */
   cumulativePct: number | null;
+  cumulativeGoldWeight: number;
+  slMonthTarget: number;
+  cumulativeSlPct: number | null;
   categories: CategoryBreakdownRow[];
 }
 
@@ -239,4 +251,64 @@ export interface UploadReportResponse {
   datasetId: string;
   meta: ReportDatasetMeta;
   groupConfig: GroupConfig;
+}
+
+export type StoreLevel = 1 | 2 | 3 | 4 | 5;
+
+export type CommissionGroupKey = "tich-tru" | "ts24k" | "ts-khac";
+
+export type CommissionRole = "tvv" | "cht" | "cashier";
+
+export interface CommissionLevelRates {
+  /** VND / chỉ */
+  tichTru: number;
+  /** VND / chỉ */
+  ts24k: number;
+  /** Phần trăm hoa hồng, ví dụ 0.18 = 0.18% */
+  tsKhacPct: number;
+}
+
+export interface CommissionRates {
+  cht: Record<StoreLevel, CommissionLevelRates>;
+  tvv: Record<StoreLevel, CommissionLevelRates>;
+  cashier: Record<StoreLevel, number>;
+}
+
+export interface CommissionConfig {
+  storeLevel: StoreLevel;
+  chtName: string;
+  chtTrainee: boolean;
+  cashierName: string;
+  tvvLevels: Record<string, StoreLevel>;
+  rates: CommissionRates;
+}
+
+export interface CommissionGroupLine {
+  key: CommissionGroupKey;
+  label: string;
+  actual: number;
+  plan: number;
+  pct: number | null;
+  eligible: boolean;
+  overPlan: boolean;
+  amount: number;
+  unit: "chi" | "vnd";
+}
+
+export interface CommissionPersonRow {
+  role: CommissionRole;
+  name: string;
+  level: StoreLevel;
+  groups: CommissionGroupLine[];
+  total: number;
+  eligible: boolean;
+  note: string;
+}
+
+export interface CommissionForecast {
+  asOfDate: string;
+  tvv: CommissionPersonRow[];
+  cht: CommissionPersonRow | null;
+  cashier: CommissionPersonRow | null;
+  grandTotal: number;
 }

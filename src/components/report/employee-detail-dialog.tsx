@@ -1,6 +1,8 @@
 "use client";
 
-import type { EmployeeTargetDetail } from "@/lib/report/types";
+import type { CommissionPersonRow, EmployeeTargetDetail } from "@/lib/report/types";
+import { buildTvvCommission } from "@/lib/report/commission";
+import { useReportStore } from "@/lib/report-store";
 import {
   Dialog,
   DialogBody,
@@ -74,6 +76,72 @@ function TargetProgressBar({
   );
 }
 
+function formatCommissionActual(row: { actual: number; unit: "chi" | "vnd" }): string {
+  return row.unit === "vnd" ? formatVnd(row.actual) : formatNumber(row.actual);
+}
+
+function formatCommissionPlan(row: { plan: number; unit: "chi" | "vnd" }): string {
+  return row.unit === "vnd" ? formatVnd(row.plan) : formatNumber(row.plan);
+}
+
+function EmployeeCommissionSection({ row }: { row: CommissionPersonRow }) {
+  return (
+    <div>
+      <p className="mb-2 text-sm font-semibold">Hoa hồng dự kiến</p>
+      <div className="overflow-auto rounded-xl border border-border/60">
+        <table className="w-full min-w-[480px] border-collapse text-xs">
+          <thead>
+            <tr className="bg-lavender-soft/50 text-left text-muted-foreground">
+              <th className="px-3 py-2 font-medium">Nhóm HH</th>
+              <th className="px-3 py-2 text-right font-medium">Thực / Kế hoạch</th>
+              <th className="px-3 py-2 text-right font-medium">% hoàn thành</th>
+              <th className="px-3 py-2 text-right font-medium">Hoa hồng</th>
+            </tr>
+          </thead>
+          <tbody>
+            {row.groups.map((g) => (
+              <tr key={g.key} className="border-t border-border/40">
+                <td className="px-3 py-2 font-medium">{g.label}</td>
+                <td className="px-3 py-2 text-right tabular-nums">
+                  <span className="font-bold">{formatCommissionActual(g)}</span>
+                  <span className="text-muted-foreground"> / {formatCommissionPlan(g)}</span>
+                </td>
+                <td
+                  className={cn(
+                    "px-3 py-2 text-right font-bold tabular-nums",
+                    g.eligible ? "text-success" : "text-coral",
+                  )}
+                >
+                  {formatPctVi(g.pct)}
+                </td>
+                <td className="px-3 py-2 text-right font-bold tabular-nums text-primary">
+                  {formatVnd(g.amount)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-border bg-lavender-soft/40">
+              <td className="px-3 py-2.5 font-semibold" colSpan={3}>
+                Tổng
+              </td>
+              <td
+                className={cn(
+                  "px-3 py-2.5 text-right text-sm font-bold tabular-nums",
+                  row.eligible ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                {formatVnd(row.total)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{row.note}</p>
+    </div>
+  );
+}
+
 export function EmployeeDetailDialog({
   detail,
   open,
@@ -83,9 +151,11 @@ export function EmployeeDetailDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const commissionConfig = useReportStore((s) => s.commissionConfig);
   if (!detail) return null;
 
   const plan = detail.dtPlan > 0 || detail.slPlan > 0;
+  const commission = buildTvvCommission(detail, commissionConfig);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -218,6 +288,8 @@ export function EmployeeDetailDialog({
               )}
             </>
           )}
+
+          <EmployeeCommissionSection row={commission} />
 
           {detail.suggestions.length > 0 && (
             <div>

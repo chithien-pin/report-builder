@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownRight,
   ArrowLeft,
@@ -8,17 +8,22 @@ import {
   RefreshCw,
   Settings2,
   Upload,
+  Wallet,
 } from "lucide-react";
 
 import { AllDaysTable } from "@/components/report/all-days-table";
 import { CategoryBreakdownCard } from "@/components/report/category-breakdown-card";
+import { CommissionConfigDialog } from "@/components/report/commission-config-dialog";
+import { CommissionForecastCard } from "@/components/report/commission-forecast-card";
 import { DayDetailTable } from "@/components/report/day-detail-table";
 import { EmployeePerformanceCard } from "@/components/report/employee-performance-card";
 import { GroupConfigDialog } from "@/components/report/group-config-dialog";
 import { MonthKpiProgress } from "@/components/report/month-kpi-progress";
+import { ReportCardNav } from "@/components/report/report-card-nav";
 import { Button } from "@/components/ui/button";
 import { fetchDailySeries, fetchDayReport, saveGroupConfig } from "@/lib/report-api";
 import { useReportStore } from "@/lib/report-store";
+import { buildCommissionForecast } from "@/lib/report/commission";
 import type { CategoryBreakdown, GroupConfig } from "@/lib/report/types";
 import { cn, formatNumber } from "@/lib/utils";
 
@@ -100,6 +105,7 @@ export function ReportScreen() {
   const monthKpi = useReportStore((s) => s.monthKpi);
   const loading = useReportStore((s) => s.loading);
   const error = useReportStore((s) => s.error);
+  const commissionConfig = useReportStore((s) => s.commissionConfig);
 
   const setSelectedDate = useReportStore((s) => s.setSelectedDate);
   const setViewMode = useReportStore((s) => s.setViewMode);
@@ -109,12 +115,35 @@ export function ReportScreen() {
   const setSeries = useReportStore((s) => s.setSeries);
   const setMonthKpi = useReportStore((s) => s.setMonthKpi);
   const setGroupConfig = useReportStore((s) => s.setGroupConfig);
+  const setCommissionConfig = useReportStore((s) => s.setCommissionConfig);
   const setLoading = useReportStore((s) => s.setLoading);
   const setError = useReportStore((s) => s.setError);
   const clearSales = useReportStore((s) => s.clearSales);
 
   const [configOpen, setConfigOpen] = useState(false);
+  const [commissionOpen, setCommissionOpen] = useState(false);
   const isOverview = viewMode === "overview";
+
+  const commissionForecast = useMemo(() => {
+    if (!employeePerformance) return null;
+    return buildCommissionForecast(
+      employeePerformance.targetDetails,
+      monthKpi,
+      commissionConfig,
+    );
+  }, [commissionConfig, employeePerformance, monthKpi]);
+
+  const overviewNavItems = useMemo(() => {
+    const items: { id: string; label: string }[] = [];
+    if (monthKpi) items.push({ id: "report-card-month-kpi", label: "Tiến độ tháng" });
+    if (categoryBreakdown) items.push({ id: "report-card-category", label: "Cơ cấu ngành hàng" });
+    if (employeePerformance && employeePerformance.employees.length > 0) {
+      items.push({ id: "report-card-employees", label: "Hiệu suất nhân viên" });
+    }
+    if (commissionForecast) items.push({ id: "report-card-commission", label: "Hoa hồng dự kiến" });
+    if (series.length > 0) items.push({ id: "report-card-all-days", label: "Tất cả ngày" });
+    return items;
+  }, [categoryBreakdown, commissionForecast, employeePerformance, monthKpi, series.length]);
 
   const loadDay = useCallback(
     async (date?: string | null) => {
@@ -246,6 +275,10 @@ export function ReportScreen() {
               <Settings2 className="h-4 w-4" />
               Nhóm
             </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setCommissionOpen(true)}>
+              <Wallet className="h-4 w-4" />
+              Hoa hồng
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -262,7 +295,7 @@ export function ReportScreen() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 overflow-auto px-4 pb-6 md:px-6">
+      <main className="mx-auto w-full max-w-7xl flex-1 overflow-auto px-4 pb-6 md:px-6 lg:pr-52">
         {error && (
           <p className="mb-4 rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}
@@ -276,27 +309,44 @@ export function ReportScreen() {
 
         {isOverview && (
           <>
-            {monthKpi && <MonthKpiProgress kpi={monthKpi} />}
+            <ReportCardNav items={overviewNavItems} />
+            {monthKpi && (
+              <div id="report-card-month-kpi" className="scroll-mt-4">
+                <MonthKpiProgress kpi={monthKpi} />
+              </div>
+            )}
             {categoryBreakdown && (
-              <>
+              <div id="report-card-category" className="scroll-mt-4">
                 {isStaleCategoryBreakdown(categoryBreakdown) && <CategoryStaleWarning />}
                 <CategoryBreakdownCard
                   data={categoryBreakdown}
                   scopeLabel={formatOverviewScope(meta.dates)}
                 />
-              </>
+              </div>
             )}
             {employeePerformance && employeePerformance.employees.length > 0 && (
-              <EmployeePerformanceCard
-                data={employeePerformance}
-                scopeLabel={formatOverviewScope(meta.dates)}
-              />
+              <div id="report-card-employees" className="scroll-mt-4">
+                <EmployeePerformanceCard
+                  data={employeePerformance}
+                  scopeLabel={formatOverviewScope(meta.dates)}
+                />
+              </div>
             )}
-            <AllDaysTable
-              series={series}
-              selectedDate={selectedDate}
-              onSelectDate={openDayDetail}
-            />
+            {commissionForecast && (
+              <div id="report-card-commission" className="scroll-mt-4">
+                <CommissionForecastCard
+                  data={commissionForecast}
+                  onOpenConfig={() => setCommissionOpen(true)}
+                />
+              </div>
+            )}
+            <div id="report-card-all-days" className="scroll-mt-4">
+              <AllDaysTable
+                series={series}
+                selectedDate={selectedDate}
+                onSelectDate={openDayDetail}
+              />
+            </div>
           </>
         )}
 
@@ -351,6 +401,13 @@ export function ReportScreen() {
         targetColumns={meta.targetColumns}
         value={groupConfig}
         onSave={handleSaveConfig}
+      />
+      <CommissionConfigDialog
+        open={commissionOpen}
+        onOpenChange={setCommissionOpen}
+        employeeNames={employeePerformance?.employees.map((e) => e.name) ?? []}
+        value={commissionConfig}
+        onSave={setCommissionConfig}
       />
     </div>
   );
