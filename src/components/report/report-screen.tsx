@@ -5,6 +5,7 @@ import {
   ArrowDownRight,
   ArrowLeft,
   ArrowUpRight,
+  CalendarRange,
   RefreshCw,
   Settings2,
   Upload,
@@ -19,6 +20,7 @@ import { DayDetailTable } from "@/components/report/day-detail-table";
 import { EmployeePerformanceCard } from "@/components/report/employee-performance-card";
 import { GroupConfigDialog } from "@/components/report/group-config-dialog";
 import { MonthKpiProgress } from "@/components/report/month-kpi-progress";
+import { OverviewDateRangeDialog } from "@/components/report/overview-date-range-dialog";
 import { ReportCardNav } from "@/components/report/report-card-nav";
 import { Button } from "@/components/ui/button";
 import { fetchDailySeries, fetchDayReport, saveGroupConfig } from "@/lib/report-api";
@@ -32,7 +34,16 @@ function formatDateVi(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
-function formatOverviewScope(dates: string[]): string {
+function formatOverviewScope(
+  dates: string[],
+  fromDate?: string | null,
+  toDate?: string | null,
+): string {
+  if (fromDate || toDate) {
+    const from = fromDate ? formatDateVi(fromDate) : "…";
+    const to = toDate ? formatDateVi(toDate) : "…";
+    return `${from} – ${to}`;
+  }
   if (dates.length === 0) return "Lũy kế";
   if (dates.length === 1) return formatDateVi(dates[0]!);
   return `Lũy kế ${dates.length} ngày (${formatDateVi(dates[0]!)} – ${formatDateVi(dates[dates.length - 1]!)})`;
@@ -106,6 +117,8 @@ export function ReportScreen() {
   const loading = useReportStore((s) => s.loading);
   const error = useReportStore((s) => s.error);
   const commissionConfig = useReportStore((s) => s.commissionConfig);
+  const overviewFromDate = useReportStore((s) => s.overviewFromDate);
+  const overviewToDate = useReportStore((s) => s.overviewToDate);
 
   const setSelectedDate = useReportStore((s) => s.setSelectedDate);
   const setViewMode = useReportStore((s) => s.setViewMode);
@@ -116,13 +129,21 @@ export function ReportScreen() {
   const setMonthKpi = useReportStore((s) => s.setMonthKpi);
   const setGroupConfig = useReportStore((s) => s.setGroupConfig);
   const setCommissionConfig = useReportStore((s) => s.setCommissionConfig);
+  const setOverviewDateRange = useReportStore((s) => s.setOverviewDateRange);
   const setLoading = useReportStore((s) => s.setLoading);
   const setError = useReportStore((s) => s.setError);
   const clearSales = useReportStore((s) => s.clearSales);
 
   const [configOpen, setConfigOpen] = useState(false);
   const [commissionOpen, setCommissionOpen] = useState(false);
+  const [dateRangeOpen, setDateRangeOpen] = useState(false);
   const isOverview = viewMode === "overview";
+  const hasDateFilter = Boolean(overviewFromDate || overviewToDate);
+  const overviewScopeLabel = formatOverviewScope(
+    meta?.dates ?? [],
+    overviewFromDate,
+    overviewToDate,
+  );
 
   const commissionForecast = useMemo(() => {
     if (!employeePerformance) return null;
@@ -180,7 +201,10 @@ export function ReportScreen() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchDailySeries(datasetId);
+      const res = await fetchDailySeries(datasetId, {
+        fromDate: overviewFromDate,
+        toDate: overviewToDate,
+      });
       setSeries(res.series);
       setMonthKpi(res.monthKpi);
       setCategoryBreakdown(res.categoryBreakdown);
@@ -191,7 +215,18 @@ export function ReportScreen() {
     } finally {
       setLoading(false);
     }
-  }, [datasetId, setCategoryBreakdown, setEmployeePerformance, setError, setGroupConfig, setLoading, setMonthKpi, setSeries]);
+  }, [
+    datasetId,
+    overviewFromDate,
+    overviewToDate,
+    setCategoryBreakdown,
+    setEmployeePerformance,
+    setError,
+    setGroupConfig,
+    setLoading,
+    setMonthKpi,
+    setSeries,
+  ]);
 
   useEffect(() => {
     if (!datasetId) return;
@@ -200,8 +235,8 @@ export function ReportScreen() {
     } else {
       void loadDay(selectedDate);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reload when mode/dataset/date changes
-  }, [datasetId, viewMode, selectedDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reload when mode/dataset/date/range changes
+  }, [datasetId, viewMode, selectedDate, overviewFromDate, overviewToDate]);
 
   function openDayDetail(date: string) {
     setSelectedDate(date);
@@ -271,6 +306,18 @@ export function ReportScreen() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {isOverview && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className={cn(hasDateFilter && "border-primary/40 bg-lavender-soft text-primary")}
+                onClick={() => setDateRangeOpen(true)}
+              >
+                <CalendarRange className="h-4 w-4" />
+                {hasDateFilter ? overviewScopeLabel : "Từ – đến ngày"}
+              </Button>
+            )}
             <Button type="button" variant="outline" size="sm" onClick={() => setConfigOpen(true)}>
               <Settings2 className="h-4 w-4" />
               Nhóm
@@ -320,7 +367,7 @@ export function ReportScreen() {
                 {isStaleCategoryBreakdown(categoryBreakdown) && <CategoryStaleWarning />}
                 <CategoryBreakdownCard
                   data={categoryBreakdown}
-                  scopeLabel={formatOverviewScope(meta.dates)}
+                  scopeLabel={overviewScopeLabel}
                 />
               </div>
             )}
@@ -328,7 +375,7 @@ export function ReportScreen() {
               <div id="report-card-employees" className="scroll-mt-4">
                 <EmployeePerformanceCard
                   data={employeePerformance}
-                  scopeLabel={formatOverviewScope(meta.dates)}
+                  scopeLabel={overviewScopeLabel}
                 />
               </div>
             )}
@@ -408,6 +455,14 @@ export function ReportScreen() {
         employeeNames={employeePerformance?.employees.map((e) => e.name) ?? []}
         value={commissionConfig}
         onSave={setCommissionConfig}
+      />
+      <OverviewDateRangeDialog
+        open={dateRangeOpen}
+        onOpenChange={setDateRangeOpen}
+        availableDates={meta.dates}
+        fromDate={overviewFromDate}
+        toDate={overviewToDate}
+        onApply={setOverviewDateRange}
       />
     </div>
   );

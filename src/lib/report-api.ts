@@ -89,6 +89,7 @@ export async function fetchDayReport(
 
 export async function fetchDailySeries(
   datasetId: string,
+  opts?: { fromDate?: string | null; toDate?: string | null },
 ): Promise<{
   meta: ReportDatasetMeta;
   groupConfig: GroupConfig;
@@ -96,8 +97,11 @@ export async function fetchDailySeries(
   monthKpi: MonthKpiSummary | null;
   categoryBreakdown: CategoryBreakdown;
   employeePerformance: EmployeePerformance;
+  dateRange?: { fromDate: string | null; toDate: string | null };
 }> {
   const params = new URLSearchParams({ datasetId, mode: "series" });
+  if (opts?.fromDate) params.set("fromDate", opts.fromDate);
+  if (opts?.toDate) params.set("toDate", opts.toDate);
   const res = await fetch(`/api/report/summary?${params}`);
   if (!res.ok) throw new Error(await readError(res));
   return (await res.json()) as {
@@ -107,6 +111,7 @@ export async function fetchDailySeries(
     monthKpi: MonthKpiSummary | null;
     categoryBreakdown: CategoryBreakdown;
     employeePerformance: EmployeePerformance;
+    dateRange?: { fromDate: string | null; toDate: string | null };
   };
 }
 

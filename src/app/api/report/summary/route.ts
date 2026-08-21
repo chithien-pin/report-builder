@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildDailySeries, buildDayReport, buildMonthKpi } from "@/lib/report/engine";
 import { buildCategoryBreakdown } from "@/lib/report/category-breakdown";
 import { buildEmployeePerformance } from "@/lib/report/employee-performance";
+import { clampDateRange, filterSalesByDateRange } from "@/lib/report/date-range";
 import { loadReportDataset, updateGroupConfig } from "@/lib/report/storage";
 import type { GroupConfig } from "@/lib/report/types";
 
@@ -15,6 +16,8 @@ export async function GET(req: NextRequest) {
     const datasetId = searchParams.get("datasetId");
     const date = searchParams.get("date");
     const mode = searchParams.get("mode") ?? "day";
+    const fromDateParam = searchParams.get("fromDate");
+    const toDateParam = searchParams.get("toDate");
 
     if (!datasetId) {
       return NextResponse.json({ error: "Thiếu datasetId" }, { status: 400 });
@@ -23,21 +26,39 @@ export async function GET(req: NextRequest) {
     const dataset = await loadReportDataset(datasetId);
 
     if (mode === "series") {
-      const series = buildDailySeries(dataset.sales, dataset.target, dataset.groupConfig);
-      const monthKpi = buildMonthKpi(dataset.sales, dataset.target, dataset.groupConfig);
-      const lastDate = dataset.meta.dates[dataset.meta.dates.length - 1];
+      const { fromDate, toDate } = clampDateRange(
+        fromDateParam,
+        toDateParam,
+        dataset.meta.dates,
+      );
       const asOfDate =
+        toDate ??
         [...dataset.sales.map((r) => r.date)]
           .filter((d) => d.startsWith(dataset.target.planMonth))
           .sort()
           .pop() ??
-        lastDate ??
+        dataset.meta.dates[dataset.meta.dates.length - 1] ??
         dataset.target.planMonth + "-01";
 
+      const kpiSales = filterSalesByDateRange(dataset.sales, null, asOfDate);
+      const monthKpi = buildMonthKpi(kpiSales, dataset.target, dataset.groupConfig);
+
+      const fullSeries = buildDailySeries(dataset.sales, dataset.target, dataset.groupConfig);
+      const series = fullSeries.filter((row) => {
+        if (fromDate && row.date < fromDate) return false;
+        if (toDate && row.date > toDate) return false;
+        return true;
+      });
+
+      const hasRange = Boolean(fromDate || toDate);
       const categoryBreakdown = buildCategoryBreakdown(dataset.sales, dataset.target, {
+        periodFrom: hasRange ? fromDate ?? dataset.meta.dates[0] : null,
+        periodTo: hasRange ? toDate ?? asOfDate : null,
         asOfDate,
       });
       const employeePerformance = buildEmployeePerformance(dataset.sales, {
+        periodFrom: hasRange ? fromDate ?? dataset.meta.dates[0] : null,
+        periodTo: hasRange ? toDate ?? asOfDate : null,
         asOfDate,
         target: dataset.target,
       });
@@ -48,6 +69,7 @@ export async function GET(req: NextRequest) {
         monthKpi,
         categoryBreakdown,
         employeePerformance,
+        dateRange: { fromDate, toDate },
       });
     }
 

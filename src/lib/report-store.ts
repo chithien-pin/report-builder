@@ -33,6 +33,8 @@ interface ReportState {
   loading: boolean;
   error: string | null;
   commissionConfig: CommissionConfig;
+  overviewFromDate: string | null;
+  overviewToDate: string | null;
 
   setUploadResult: (
     datasetId: string,
@@ -50,6 +52,7 @@ interface ReportState {
   setMonthKpi: (kpi: MonthKpiSummary | null) => void;
   setGroupConfig: (config: GroupConfig) => void;
   setCommissionConfig: (config: CommissionConfig) => void;
+  setOverviewDateRange: (fromDate: string | null, toDate: string | null) => void;
   setMeta: (meta: ReportDatasetMeta) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -73,6 +76,8 @@ const initial = {
   loading: false,
   error: null as string | null,
   commissionConfig: createDefaultCommissionConfig(),
+  overviewFromDate: null as string | null,
+  overviewToDate: null as string | null,
 };
 
 export const useReportStore = create<ReportState>()(
@@ -93,6 +98,8 @@ export const useReportStore = create<ReportState>()(
           employeePerformance: null,
           series: [],
           monthKpi: null,
+          overviewFromDate: null,
+          overviewToDate: null,
           error: null,
         })),
 
@@ -106,6 +113,8 @@ export const useReportStore = create<ReportState>()(
       setMonthKpi: (kpi) => set({ monthKpi: kpi }),
       setGroupConfig: (config) => set({ groupConfig: config }),
       setCommissionConfig: (config) => set({ commissionConfig: config }),
+      setOverviewDateRange: (fromDate, toDate) =>
+        set({ overviewFromDate: fromDate, overviewToDate: toDate }),
       setMeta: (meta) => set({ meta }),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
@@ -125,17 +134,23 @@ export const useReportStore = create<ReportState>()(
     }),
     {
       name: "reportbtmh-bao-cao-ngay",
-      version: 4,
+      version: 5,
       migrate: (persisted, version) => {
         const state = persisted as {
           viewMode?: string;
           commissionConfig?: CommissionConfig;
+          overviewFromDate?: string | null;
+          overviewToDate?: string | null;
         };
         if (version < 3 && state.viewMode === "all") {
           state.viewMode = "overview";
         }
         if (version < 4 || !state.commissionConfig) {
           state.commissionConfig = createDefaultCommissionConfig();
+        }
+        if (version < 5) {
+          state.overviewFromDate = null;
+          state.overviewToDate = null;
         }
         return persisted as typeof initial;
       },
@@ -147,6 +162,8 @@ export const useReportStore = create<ReportState>()(
         selectedDate: state.selectedDate,
         viewMode: state.viewMode,
         commissionConfig: state.commissionConfig,
+        overviewFromDate: state.overviewFromDate,
+        overviewToDate: state.overviewToDate,
       }),
     },
   ),

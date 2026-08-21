@@ -19,4 +19,5 @@ export { buildEmployeePerformance } from "./employee-performance";
 export { buildEmployeeTargetDetails, getEmployeeTargetDetail } from "./employee-targets";
 export { buildCommissionForecast, buildTvvCommission } from "./commission";
 export { createDefaultCommissionConfig, cloneDefaultRates } from "./commission-defaults";
+export { filterSalesByDateRange, clampDateRange } from "./date-range";
 export * from "./week-periods";

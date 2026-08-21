@@ -116,7 +116,7 @@ export function CategoryBreakdownCard({
               <th className="px-3 py-2.5 text-right font-medium">Tỷ trọng</th>
               <th className="px-3 py-2.5 text-right font-medium">% Lũy kế CT</th>
               <th className="px-3 py-2.5 text-right font-medium">Sản lượng</th>
-              <th className="px-3 py-2.5 text-right font-medium">SL lũy kế</th>
+              <th className="px-3 py-2.5 text-right font-medium">SL thực / KH</th>
               <th className="px-3 py-2.5 text-right font-medium">% Lũy kế SL</th>
               <th className="px-3 py-2.5 text-right font-medium">Số đơn</th>
               <th className="px-3 py-2.5 text-right font-medium">LN gộp</th>
@@ -155,7 +155,7 @@ export function CategoryBreakdownCard({
                       <span className="text-muted-foreground">—</span>
                     ) : (
                       <>
-                        <span className="font-medium">{formatNumber(row.cumulativeSl)}</span>
+                        <span className="font-bold">{formatNumber(row.cumulativeSl)}</span>
                         {row.slMonthTarget > 0 && (
                           <span className="text-muted-foreground">
                             {" / "}

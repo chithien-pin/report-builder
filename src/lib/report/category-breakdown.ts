@@ -30,6 +30,44 @@ function slForRow(r: SalesRow, category: string): number {
   return slUnitForCategory(category) === "chi" ? r.goldWeight : r.quantity;
 }
 
+function normLabel(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Chỉ tiêu SL theo chỉ từ kế hoạch TVV — cùng nguồn với hoa hồng CHT. */
+function slPlanFromEmployeePlans(category: string, target: TargetData): number {
+  const plans = target.employeePlans ?? [];
+  if (plans.length === 0) return 0;
+
+  const match = (label: string): boolean => {
+    const n = normLabel(label);
+    if (n.includes("chiec")) return false;
+    switch (category) {
+      case "Vàng tích lũy":
+        return n.includes("vang tt");
+      case "Bạc tích lũy":
+        return n.includes("bac tt");
+      case "TS vàng ta":
+        return n.includes("vang ta") || n.includes("ts24k");
+      default:
+        return false;
+    }
+  };
+
+  let sum = 0;
+  for (const plan of plans) {
+    for (const row of plan.slBreakdown) {
+      if (match(row.label)) sum += row.value;
+    }
+  }
+  return sum;
+}
+
 function prorateMonthTargets(
   cumulativeActualByCat: Map<string, number>,
   catToColumn: Map<string, string>,
@@ -144,7 +182,9 @@ function aggregateRows(
       const hideSl = hideSlForCategory(category);
       const slUnit = slUnitForCategory(category);
       const cumulativeSl = hideSl ? 0 : (cumulativeSlByCat.get(category) ?? 0);
-      const slMonthTarget = hideSl ? 0 : (slMonthTargetByCat.get(category) ?? 0);
+      const fromEmployees = hideSl ? 0 : slPlanFromEmployeePlans(category, target);
+      const slMonthTarget =
+        hideSl ? 0 : fromEmployees > 0 ? fromEmployees : (slMonthTargetByCat.get(category) ?? 0);
 
       return {
         category,
@@ -172,8 +212,8 @@ function aggregateRows(
     0,
   );
   const cumulativeGoldWeight = [...cumulativeGoldWeightByCat.values()].reduce((a, v) => a + v, 0);
-  const slMonthTarget = [...new Set(catToSlColumn.values())].reduce(
-    (s, colKey) => s + (target.monthTotals[colKey] ?? 0),
+  const slMonthTarget = categories.reduce(
+    (s, row) => s + (row.hideSl ? 0 : row.slMonthTarget),
     0,
   );
 
@@ -197,6 +237,10 @@ function aggregateRows(
 export interface BuildCategoryBreakdownOptions {
   /** Filter period stats to this day; omit for all rows in `sales`. */
   periodDate?: string | null;
+  /** Inclusive period start (with periodEnd). Ignored when periodDate is set. */
+  periodFrom?: string | null;
+  /** Inclusive period end (with periodFrom). Ignored when periodDate is set. */
+  periodTo?: string | null;
   /** Cumulative actual calculated through this date (inclusive). */
   asOfDate: string;
 }
@@ -206,8 +250,15 @@ export function buildCategoryBreakdown(
   target: TargetData,
   opts: BuildCategoryBreakdownOptions,
 ): CategoryBreakdown {
-  const periodRows = opts.periodDate
-    ? sales.filter((r) => r.date === opts.periodDate)
-    : sales;
+  let periodRows = sales;
+  if (opts.periodDate) {
+    periodRows = sales.filter((r) => r.date === opts.periodDate);
+  } else if (opts.periodFrom || opts.periodTo) {
+    periodRows = sales.filter((r) => {
+      if (opts.periodFrom && r.date < opts.periodFrom) return false;
+      if (opts.periodTo && r.date > opts.periodTo) return false;
+      return true;
+    });
+  }
   return aggregateRows(periodRows, sales, target, opts.asOfDate);
 }

@@ -96,6 +96,9 @@ function buildInsights(employees: EmployeePerformanceRow[]): EmployeeInsight[] {
 
 export interface BuildEmployeePerformanceOptions {
   periodDate?: string | null;
+  /** Inclusive period start (with periodTo). Ignored when periodDate is set. */
+  periodFrom?: string | null;
+  periodTo?: string | null;
   asOfDate: string;
   target: TargetData;
 }
@@ -104,9 +107,16 @@ export function buildEmployeePerformance(
   sales: SalesRow[],
   opts: BuildEmployeePerformanceOptions,
 ): EmployeePerformance {
-  const rows = opts.periodDate
-    ? sales.filter((r) => r.date === opts.periodDate)
-    : sales;
+  let rows = sales;
+  if (opts.periodDate) {
+    rows = sales.filter((r) => r.date === opts.periodDate);
+  } else if (opts.periodFrom || opts.periodTo) {
+    rows = sales.filter((r) => {
+      if (opts.periodFrom && r.date < opts.periodFrom) return false;
+      if (opts.periodTo && r.date > opts.periodTo) return false;
+      return true;
+    });
+  }
 
   const byEmp = new Map<
     string,

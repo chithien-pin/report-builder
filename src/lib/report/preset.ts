@@ -71,7 +71,7 @@ const DEFAULT_TARGET_HINTS: Record<string, { dt?: string[]; sl?: string[] }> = {
   },
   [gid("Vàng TS 24K")]: {
     dt: ["trang suc vang ta"],
-    sl: ["trang suc vang ta (chiec)"],
+    sl: ["trang suc vang ta (chi)"],
   },
   [gid("TS vàng tây")]: {
     dt: ["trang suc khac"],
