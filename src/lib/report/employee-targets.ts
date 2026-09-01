@@ -1,4 +1,9 @@
-import type { EmployeeTargetDetail, EmployeeTargetPlan, SalesRow } from "./types";
+import type {
+  EmployeeTargetBreakdownRow,
+  EmployeeTargetDetail,
+  EmployeeTargetPlan,
+  SalesRow,
+} from "./types";
 import { pct } from "./targets";
 
 type SlUnit = "chi" | "piece";
@@ -235,4 +240,41 @@ export function getEmployeeTargetDetail(
   name: string,
 ): EmployeeTargetDetail | null {
   return details.find((d) => d.name === name) ?? null;
+}
+
+const STORE_BREAKDOWN_ORDER = [
+  "Vàng TT",
+  "Bạc TT",
+  "Trang sức vàng ta",
+  "Trang sức khác",
+];
+
+/** Cộng chỉ tiêu / thực tế theo ngành hàng của toàn cửa hàng (từ breakdown từng TVV). */
+export function buildStoreTargetBreakdown(
+  details: EmployeeTargetDetail[],
+): EmployeeTargetBreakdownRow[] {
+  const map = new Map<string, EmployeeTargetBreakdownRow>();
+
+  for (const detail of details) {
+    for (const row of detail.breakdown) {
+      const prev = map.get(row.label) ?? {
+        label: row.label,
+        dtActual: 0,
+        dtPlan: 0,
+        slActual: 0,
+        slPlan: 0,
+      };
+      prev.dtActual += row.dtActual;
+      prev.dtPlan += row.dtPlan;
+      prev.slActual += row.slActual;
+      prev.slPlan += row.slPlan;
+      map.set(row.label, prev);
+    }
+  }
+
+  const ordered = STORE_BREAKDOWN_ORDER.map((label) => map.get(label)).filter(
+    (row): row is EmployeeTargetBreakdownRow => row != null,
+  );
+  const rest = [...map.values()].filter((row) => !STORE_BREAKDOWN_ORDER.includes(row.label));
+  return [...ordered, ...rest];
 }

@@ -22,10 +22,12 @@ import { GroupConfigDialog } from "@/components/report/group-config-dialog";
 import { MonthKpiProgress } from "@/components/report/month-kpi-progress";
 import { OverviewDateRangeDialog } from "@/components/report/overview-date-range-dialog";
 import { ReportCardNav } from "@/components/report/report-card-nav";
+import { StoreCategoryTargetCard } from "@/components/report/store-category-target-card";
 import { Button } from "@/components/ui/button";
 import { fetchDailySeries, fetchDayReport, saveGroupConfig } from "@/lib/report-api";
 import { useReportStore } from "@/lib/report-store";
 import { buildCommissionForecast } from "@/lib/report/commission";
+import { buildStoreTargetBreakdown } from "@/lib/report/employee-targets";
 import type { CategoryBreakdown, GroupConfig } from "@/lib/report/types";
 import { cn, formatNumber } from "@/lib/utils";
 
@@ -154,9 +156,17 @@ export function ReportScreen() {
     );
   }, [commissionConfig, employeePerformance, monthKpi]);
 
+  const storeCategoryTargets = useMemo(() => {
+    if (!employeePerformance?.targetDetails.length) return [];
+    return buildStoreTargetBreakdown(employeePerformance.targetDetails);
+  }, [employeePerformance]);
+
   const overviewNavItems = useMemo(() => {
     const items: { id: string; label: string }[] = [];
     if (monthKpi) items.push({ id: "report-card-month-kpi", label: "Tiến độ tháng" });
+    if (storeCategoryTargets.length > 0) {
+      items.push({ id: "report-card-store-category", label: "Theo ngành hàng" });
+    }
     if (categoryBreakdown) items.push({ id: "report-card-category", label: "Cơ cấu ngành hàng" });
     if (employeePerformance && employeePerformance.employees.length > 0) {
       items.push({ id: "report-card-employees", label: "Hiệu suất nhân viên" });
@@ -164,7 +174,14 @@ export function ReportScreen() {
     if (commissionForecast) items.push({ id: "report-card-commission", label: "Hoa hồng dự kiến" });
     if (series.length > 0) items.push({ id: "report-card-all-days", label: "Tất cả ngày" });
     return items;
-  }, [categoryBreakdown, commissionForecast, employeePerformance, monthKpi, series.length]);
+  }, [
+    categoryBreakdown,
+    commissionForecast,
+    employeePerformance,
+    monthKpi,
+    series.length,
+    storeCategoryTargets.length,
+  ]);
 
   const loadDay = useCallback(
     async (date?: string | null) => {
@@ -360,6 +377,15 @@ export function ReportScreen() {
             {monthKpi && (
               <div id="report-card-month-kpi" className="scroll-mt-4">
                 <MonthKpiProgress kpi={monthKpi} />
+              </div>
+            )}
+            {storeCategoryTargets.length > 0 && (
+              <div id="report-card-store-category" className="scroll-mt-4">
+                <StoreCategoryTargetCard
+                  rows={storeCategoryTargets}
+                  scopeLabel={overviewScopeLabel}
+                  asOfDate={employeePerformance?.asOfDate ?? monthKpi?.asOfDate}
+                />
               </div>
             )}
             {categoryBreakdown && (
