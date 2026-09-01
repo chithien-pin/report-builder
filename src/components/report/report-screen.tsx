@@ -121,6 +121,9 @@ export function ReportScreen() {
   const commissionConfig = useReportStore((s) => s.commissionConfig);
   const overviewFromDate = useReportStore((s) => s.overviewFromDate);
   const overviewToDate = useReportStore((s) => s.overviewToDate);
+  const customProductGroups = useReportStore((s) => s.customProductGroups);
+  const productCatalog = useReportStore((s) => s.productCatalog);
+  const skuLines = useReportStore((s) => s.skuLines);
 
   const setSelectedDate = useReportStore((s) => s.setSelectedDate);
   const setViewMode = useReportStore((s) => s.setViewMode);
@@ -132,6 +135,9 @@ export function ReportScreen() {
   const setGroupConfig = useReportStore((s) => s.setGroupConfig);
   const setCommissionConfig = useReportStore((s) => s.setCommissionConfig);
   const setOverviewDateRange = useReportStore((s) => s.setOverviewDateRange);
+  const upsertCustomProductGroup = useReportStore((s) => s.upsertCustomProductGroup);
+  const removeCustomProductGroup = useReportStore((s) => s.removeCustomProductGroup);
+  const setSkuData = useReportStore((s) => s.setSkuData);
   const setLoading = useReportStore((s) => s.setLoading);
   const setError = useReportStore((s) => s.setError);
   const clearSales = useReportStore((s) => s.clearSales);
@@ -164,7 +170,11 @@ export function ReportScreen() {
   const overviewNavItems = useMemo(() => {
     const items: { id: string; label: string }[] = [];
     if (monthKpi) items.push({ id: "report-card-month-kpi", label: "Tiến độ tháng" });
-    if (storeCategoryTargets.length > 0) {
+    if (
+      storeCategoryTargets.length > 0 ||
+      customProductGroups.length > 0 ||
+      Boolean(employeePerformance)
+    ) {
       items.push({ id: "report-card-store-category", label: "Theo ngành hàng" });
     }
     if (categoryBreakdown) items.push({ id: "report-card-category", label: "Cơ cấu ngành hàng" });
@@ -177,6 +187,7 @@ export function ReportScreen() {
   }, [
     categoryBreakdown,
     commissionForecast,
+    customProductGroups.length,
     employeePerformance,
     monthKpi,
     series.length,
@@ -227,6 +238,7 @@ export function ReportScreen() {
       setCategoryBreakdown(res.categoryBreakdown);
       setEmployeePerformance(res.employeePerformance);
       setGroupConfig(res.groupConfig);
+      setSkuData(res.productCatalog ?? [], res.skuLines ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không tải được chuỗi ngày");
     } finally {
@@ -243,6 +255,7 @@ export function ReportScreen() {
     setLoading,
     setMonthKpi,
     setSeries,
+    setSkuData,
   ]);
 
   useEffect(() => {
@@ -379,12 +392,19 @@ export function ReportScreen() {
                 <MonthKpiProgress kpi={monthKpi} />
               </div>
             )}
-            {storeCategoryTargets.length > 0 && (
+            {(storeCategoryTargets.length > 0 ||
+              customProductGroups.length > 0 ||
+              Boolean(employeePerformance)) && (
               <div id="report-card-store-category" className="scroll-mt-4">
                 <StoreCategoryTargetCard
                   rows={storeCategoryTargets}
                   scopeLabel={overviewScopeLabel}
                   asOfDate={employeePerformance?.asOfDate ?? monthKpi?.asOfDate}
+                  customGroups={customProductGroups}
+                  catalog={productCatalog}
+                  skuLines={skuLines}
+                  onUpsertGroup={upsertCustomProductGroup}
+                  onRemoveGroup={removeCustomProductGroup}
                 />
               </div>
             )}

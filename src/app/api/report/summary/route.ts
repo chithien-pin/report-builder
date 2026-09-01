@@ -4,6 +4,7 @@ import { buildDailySeries, buildDayReport, buildMonthKpi } from "@/lib/report/en
 import { buildCategoryBreakdown } from "@/lib/report/category-breakdown";
 import { buildEmployeePerformance } from "@/lib/report/employee-performance";
 import { clampDateRange, filterSalesByDateRange } from "@/lib/report/date-range";
+import { buildProductCatalog, buildSkuSalesLines } from "@/lib/report/custom-product-groups";
 import { loadReportDataset, updateGroupConfig } from "@/lib/report/storage";
 import type { GroupConfig } from "@/lib/report/types";
 
@@ -51,17 +52,25 @@ export async function GET(req: NextRequest) {
       });
 
       const hasRange = Boolean(fromDate || toDate);
+      const periodFrom = hasRange ? fromDate ?? dataset.meta.dates[0] : null;
+      const periodTo = hasRange ? toDate ?? asOfDate : null;
       const categoryBreakdown = buildCategoryBreakdown(dataset.sales, dataset.target, {
-        periodFrom: hasRange ? fromDate ?? dataset.meta.dates[0] : null,
-        periodTo: hasRange ? toDate ?? asOfDate : null,
+        periodFrom,
+        periodTo,
         asOfDate,
       });
       const employeePerformance = buildEmployeePerformance(dataset.sales, {
-        periodFrom: hasRange ? fromDate ?? dataset.meta.dates[0] : null,
-        periodTo: hasRange ? toDate ?? asOfDate : null,
+        periodFrom,
+        periodTo,
         asOfDate,
         target: dataset.target,
       });
+      const productCatalog = buildProductCatalog(dataset.sales);
+      const skuLines = buildSkuSalesLines(
+        dataset.sales,
+        periodFrom ?? dataset.meta.dates[0],
+        periodTo ?? asOfDate,
+      );
       return NextResponse.json({
         meta: dataset.meta,
         groupConfig: dataset.groupConfig,
@@ -70,6 +79,8 @@ export async function GET(req: NextRequest) {
         categoryBreakdown,
         employeePerformance,
         dateRange: { fromDate, toDate },
+        productCatalog,
+        skuLines,
       });
     }
 

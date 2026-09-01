@@ -20,4 +20,11 @@ export { buildEmployeeTargetDetails, getEmployeeTargetDetail, buildStoreTargetBr
 export { buildCommissionForecast, buildTvvCommission } from "./commission";
 export { createDefaultCommissionConfig, cloneDefaultRates } from "./commission-defaults";
 export { filterSalesByDateRange, clampDateRange } from "./date-range";
+export {
+  buildProductCatalog,
+  buildSkuSalesLines,
+  buildCustomGroupBreakdownRow,
+  buildCustomGroupDayDetails,
+  buildCustomGroupEmployeeSummaries,
+} from "./custom-product-groups";
 export * from "./week-periods";

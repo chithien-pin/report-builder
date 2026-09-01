@@ -25,6 +25,10 @@ export interface SalesRow {
   productCategory: string;
   employeeName: string;
   orderId: string | null;
+  /** Mã hàng (MA HANG) */
+  productCode: string;
+  /** Tên sản phẩm / tên hàng */
+  productName: string;
   quantity: number;
   goldWeight: number;
   grossAmount: number;
@@ -225,7 +229,7 @@ export interface EmployeePerformance {
   asOfDate: string;
 }
 
-export const SALES_SCHEMA_VERSION = 3;
+export const SALES_SCHEMA_VERSION = 4;
 
 export interface ReportDatasetMeta {
   datasetId: string;
@@ -251,6 +255,30 @@ export interface UploadReportResponse {
   datasetId: string;
   meta: ReportDatasetMeta;
   groupConfig: GroupConfig;
+}
+
+/** Nhóm sản phẩm custom theo MA HANG (persist client). */
+export interface CustomProductGroup {
+  id: string;
+  name: string;
+  productCodes: string[];
+  dtPlan: number;
+  slPlan: number;
+}
+
+export interface ProductCatalogItem {
+  code: string;
+  name: string;
+}
+
+/** Dòng bán theo mã hàng (phục vụ nhóm custom + popup detail). */
+export interface SkuSalesLine {
+  date: string;
+  productCode: string;
+  productName: string;
+  employeeName: string;
+  quantity: number;
+  revenue: number;
 }
 
 export type StoreLevel = 1 | 2 | 3 | 4 | 5;

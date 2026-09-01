@@ -1,7 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
+
 import type { CommissionPersonRow, EmployeeTargetDetail } from "@/lib/report/types";
 import { buildTvvCommission } from "@/lib/report/commission";
+import {
+  buildEmployeeCustomGroupSummaries,
+  type EmployeeCustomGroupSummary,
+} from "@/lib/report/custom-product-groups";
 import { useReportStore } from "@/lib/report-store";
 import {
   Dialog,
@@ -84,6 +90,90 @@ function formatCommissionPlan(row: { plan: number; unit: "chi" | "vnd" }): strin
   return row.unit === "vnd" ? formatVnd(row.plan) : formatNumber(row.plan);
 }
 
+function EmployeeCustomGroupsSection({
+  rows,
+}: {
+  rows: EmployeeCustomGroupSummary[];
+}) {
+  return (
+    <div>
+      <p className="mb-2 text-sm font-semibold">Nhóm MA HANG</p>
+      {rows.length === 0 ? (
+        <p className="rounded-2xl bg-lavender-soft/40 px-4 py-3 text-sm text-muted-foreground">
+          Chưa có nhóm custom. Tạo ở card «Theo ngành hàng» → nút <strong>Nhóm MA HANG</strong>,
+          rồi mở lại chi tiết nhân viên.
+        </p>
+      ) : (
+        <div className="space-y-4">
+          {rows.map((row) => (
+            <div key={row.group.id} className="overflow-hidden rounded-xl border border-border/60">
+              <div className="bg-lavender-soft/40 px-4 py-3">
+                <p className="font-semibold">{row.group.name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {row.productCount} mã · SL{" "}
+                  <span className="font-medium text-foreground">{formatNumber(row.quantity)}</span>
+                  {" · "}
+                  DT{" "}
+                  <span className="font-medium text-primary">{formatVnd(row.revenue)}</span>
+                </p>
+              </div>
+              <div className="space-y-3 p-3">
+                {row.days.length === 0 ? (
+                  <p className="px-1 py-2 text-sm text-muted-foreground">
+                    Nhân viên này chưa bán mã thuộc nhóm trong khoảng lọc.
+                  </p>
+                ) : (
+                  row.days.map((day) => (
+                    <div key={day.date} className="overflow-hidden rounded-lg border border-border/50">
+                      <div className="flex flex-wrap items-center gap-2 bg-muted/30 px-3 py-1.5">
+                        <p className="text-xs font-semibold">{formatDateVi(day.date)}</p>
+                        <span className="text-[11px] text-muted-foreground">
+                          SL {formatNumber(day.quantityTotal)} · DT {formatVnd(day.revenueTotal)}
+                        </span>
+                      </div>
+                      <div className="overflow-auto">
+                        <table className="w-full min-w-[480px] border-collapse text-xs">
+                          <thead>
+                            <tr className="text-left text-muted-foreground">
+                              <th className="px-3 py-1.5 font-medium">STT</th>
+                              <th className="px-3 py-1.5 font-medium">Tên sản phẩm</th>
+                              <th className="px-3 py-1.5 text-right font-medium">Số lượng</th>
+                              <th className="px-3 py-1.5 text-right font-medium">Doanh thu</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {day.products.map((p) => (
+                              <tr key={p.productCode} className="border-t border-border/40">
+                                <td className="px-3 py-1.5 tabular-nums text-muted-foreground">
+                                  {p.stt}
+                                </td>
+                                <td className="px-3 py-1.5">
+                                  <p className="font-medium">{p.productName}</p>
+                                  <p className="text-[11px] text-muted-foreground">{p.productCode}</p>
+                                </td>
+                                <td className="px-3 py-1.5 text-right font-bold tabular-nums">
+                                  {formatNumber(p.quantity)}
+                                </td>
+                                <td className="px-3 py-1.5 text-right font-bold tabular-nums text-primary">
+                                  {formatVnd(p.revenue)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EmployeeCommissionSection({ row }: { row: CommissionPersonRow }) {
   return (
     <div>
@@ -152,6 +242,14 @@ export function EmployeeDetailDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const commissionConfig = useReportStore((s) => s.commissionConfig);
+  const customProductGroups = useReportStore((s) => s.customProductGroups);
+  const skuLines = useReportStore((s) => s.skuLines);
+
+  const customGroupRows = useMemo(() => {
+    if (!detail) return [];
+    return buildEmployeeCustomGroupSummaries(detail.name, customProductGroups, skuLines);
+  }, [customProductGroups, detail, skuLines]);
+
   if (!detail) return null;
 
   const plan = detail.dtPlan > 0 || detail.slPlan > 0;
@@ -288,6 +386,8 @@ export function EmployeeDetailDialog({
               )}
             </>
           )}
+
+          <EmployeeCustomGroupsSection rows={customGroupRows} />
 
           <EmployeeCommissionSection row={commission} />
 

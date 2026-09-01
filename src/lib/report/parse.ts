@@ -104,6 +104,27 @@ export function parseSalesBuffer(content: Buffer, filename: string): {
     const employeeRaw = pick(row, "TEN NV QUAY", "Ten NV quay", "Tên NV quầy", "Nhan vien");
     const employeeName = String(employeeRaw ?? "").trim() || "Không xác định";
 
+    const productCodeRaw = pick(row, "MA HANG", "Mã hàng", "Ma hang", "SKU", "Ma SP");
+    const productCode =
+      productCodeRaw != null && String(productCodeRaw).trim()
+        ? String(productCodeRaw).trim()
+        : "";
+    const productNameRaw = pick(
+      row,
+      "TEN HANG",
+      "Tên hàng",
+      "Ten hang",
+      "TEN SAN PHAM",
+      "Tên sản phẩm",
+      "Ten san pham",
+      "Ten SP",
+      "Tên SP",
+    );
+    const productName =
+      productNameRaw != null && String(productNameRaw).trim()
+        ? String(productNameRaw).trim()
+        : productCode || productLine;
+
     const quantity = toNumber(pick(row, "SO LUONG", "Số lượng", "So luong"));
     const goldWeight = toNumber(
       pick(row, "TRONG LUONG VANG", "Trọng lượng vàng", "TONG TRONG LUONG"),
@@ -125,6 +146,8 @@ export function parseSalesBuffer(content: Buffer, filename: string): {
       productCategory,
       employeeName,
       orderId,
+      productCode,
+      productName,
       quantity,
       goldWeight,
       grossAmount,

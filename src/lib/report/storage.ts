@@ -164,11 +164,7 @@ function salesNeedsReparsing(dataset: ReportDataset): boolean {
   const version = dataset.meta.salesSchemaVersion ?? 1;
   if (version >= SALES_SCHEMA_VERSION) return false;
   if (dataset.sales.length === 0) return false;
-  const sample = dataset.sales[0];
-  if (!("productCategory" in sample)) return true;
-  const categories = new Set(dataset.sales.map((r) => r.productCategory));
-  const lines = new Set(dataset.sales.map((r) => r.productLine));
-  return categories.size === 1 && categories.has("Khác") && lines.size > 2;
+  return true;
 }
 
 async function maybeRefreshSales(dataset: ReportDataset): Promise<ReportDataset> {

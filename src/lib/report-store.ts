@@ -7,13 +7,16 @@ import { createDefaultCommissionConfig } from "@/lib/report/commission-defaults"
 import type {
   CategoryBreakdown,
   CommissionConfig,
+  CustomProductGroup,
   DailyCompactRow,
   DayReport,
   EmployeePerformance,
   GroupConfig,
   MonthKpiSummary,
+  ProductCatalogItem,
   ReportDatasetMeta,
   SavedTargetMeta,
+  SkuSalesLine,
 } from "@/lib/report/types";
 
 export type ReportViewMode = "overview" | "day";
@@ -35,6 +38,9 @@ interface ReportState {
   commissionConfig: CommissionConfig;
   overviewFromDate: string | null;
   overviewToDate: string | null;
+  customProductGroups: CustomProductGroup[];
+  productCatalog: ProductCatalogItem[];
+  skuLines: SkuSalesLine[];
 
   setUploadResult: (
     datasetId: string,
@@ -53,10 +59,14 @@ interface ReportState {
   setGroupConfig: (config: GroupConfig) => void;
   setCommissionConfig: (config: CommissionConfig) => void;
   setOverviewDateRange: (fromDate: string | null, toDate: string | null) => void;
+  setCustomProductGroups: (groups: CustomProductGroup[]) => void;
+  upsertCustomProductGroup: (group: CustomProductGroup) => void;
+  removeCustomProductGroup: (id: string) => void;
+  setSkuData: (catalog: ProductCatalogItem[], lines: SkuSalesLine[]) => void;
   setMeta: (meta: ReportDatasetMeta) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  /** Clear sales report only — keep saved target and commission config */
+  /** Clear sales report only — keep saved target, commission, custom groups */
   clearSales: () => void;
   reset: () => void;
 }
@@ -78,6 +88,9 @@ const initial = {
   commissionConfig: createDefaultCommissionConfig(),
   overviewFromDate: null as string | null,
   overviewToDate: null as string | null,
+  customProductGroups: [] as CustomProductGroup[],
+  productCatalog: [] as ProductCatalogItem[],
+  skuLines: [] as SkuSalesLine[],
 };
 
 export const useReportStore = create<ReportState>()(
@@ -100,6 +113,8 @@ export const useReportStore = create<ReportState>()(
           monthKpi: null,
           overviewFromDate: null,
           overviewToDate: null,
+          productCatalog: [],
+          skuLines: [],
           error: null,
         })),
 
@@ -115,6 +130,22 @@ export const useReportStore = create<ReportState>()(
       setCommissionConfig: (config) => set({ commissionConfig: config }),
       setOverviewDateRange: (fromDate, toDate) =>
         set({ overviewFromDate: fromDate, overviewToDate: toDate }),
+      setCustomProductGroups: (groups) => set({ customProductGroups: groups }),
+      upsertCustomProductGroup: (group) =>
+        set((state) => {
+          const idx = state.customProductGroups.findIndex((g) => g.id === group.id);
+          if (idx < 0) {
+            return { customProductGroups: [...state.customProductGroups, group] };
+          }
+          const next = [...state.customProductGroups];
+          next[idx] = group;
+          return { customProductGroups: next };
+        }),
+      removeCustomProductGroup: (id) =>
+        set((state) => ({
+          customProductGroups: state.customProductGroups.filter((g) => g.id !== id),
+        })),
+      setSkuData: (catalog, lines) => set({ productCatalog: catalog, skuLines: lines }),
       setMeta: (meta) => set({ meta }),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
@@ -124,23 +155,26 @@ export const useReportStore = create<ReportState>()(
           ...initial,
           savedTarget: state.savedTarget,
           commissionConfig: state.commissionConfig,
+          customProductGroups: state.customProductGroups,
         })),
 
       reset: () =>
         set((state) => ({
           ...initial,
           commissionConfig: state.commissionConfig,
+          customProductGroups: state.customProductGroups,
         })),
     }),
     {
       name: "reportbtmh-bao-cao-ngay",
-      version: 5,
+      version: 6,
       migrate: (persisted, version) => {
         const state = persisted as {
           viewMode?: string;
           commissionConfig?: CommissionConfig;
           overviewFromDate?: string | null;
           overviewToDate?: string | null;
+          customProductGroups?: CustomProductGroup[];
         };
         if (version < 3 && state.viewMode === "all") {
           state.viewMode = "overview";
@@ -151,6 +185,9 @@ export const useReportStore = create<ReportState>()(
         if (version < 5) {
           state.overviewFromDate = null;
           state.overviewToDate = null;
+        }
+        if (version < 6) {
+          state.customProductGroups = [];
         }
         return persisted as typeof initial;
       },
@@ -164,6 +201,7 @@ export const useReportStore = create<ReportState>()(
         commissionConfig: state.commissionConfig,
         overviewFromDate: state.overviewFromDate,
         overviewToDate: state.overviewToDate,
+        customProductGroups: state.customProductGroups,
       }),
     },
   ),

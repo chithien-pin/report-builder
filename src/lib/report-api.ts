@@ -5,8 +5,10 @@ import type {
   EmployeePerformance,
   GroupConfig,
   MonthKpiSummary,
+  ProductCatalogItem,
   ReportDatasetMeta,
   SavedTargetMeta,
+  SkuSalesLine,
   UploadReportResponse,
 } from "@/lib/report/types";
 
@@ -98,6 +100,8 @@ export async function fetchDailySeries(
   categoryBreakdown: CategoryBreakdown;
   employeePerformance: EmployeePerformance;
   dateRange?: { fromDate: string | null; toDate: string | null };
+  productCatalog: ProductCatalogItem[];
+  skuLines: SkuSalesLine[];
 }> {
   const params = new URLSearchParams({ datasetId, mode: "series" });
   if (opts?.fromDate) params.set("fromDate", opts.fromDate);
@@ -112,6 +116,8 @@ export async function fetchDailySeries(
     categoryBreakdown: CategoryBreakdown;
     employeePerformance: EmployeePerformance;
     dateRange?: { fromDate: string | null; toDate: string | null };
+    productCatalog: ProductCatalogItem[];
+    skuLines: SkuSalesLine[];
   };
 }
 
