@@ -69,7 +69,7 @@ function CombinedMilestoneBar({ kpi }: { kpi: MonthKpiSummary }) {
   const barWidth = Math.min(progressToMilestone * 100, 100);
 
   return (
-    <div className="mt-5 border-t border-border/60 pt-5">
+    <div className="hidden mt-5 border-t border-border/60 pt-5">
       <div className="mb-2 flex items-end justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-foreground">Tiến độ đạt mốc 70% chỉ tiêu doanh thu</p>
