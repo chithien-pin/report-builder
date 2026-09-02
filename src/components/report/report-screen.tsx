@@ -389,7 +389,10 @@ export function ReportScreen() {
             <ReportCardNav items={overviewNavItems} />
             {monthKpi && (
               <div id="report-card-month-kpi" className="scroll-mt-4">
-                <MonthKpiProgress kpi={monthKpi} />
+                <MonthKpiProgress
+                  kpi={monthKpi}
+                  scopeLabel={hasDateFilter ? overviewScopeLabel : undefined}
+                />
               </div>
             )}
             {(storeCategoryTargets.length > 0 ||

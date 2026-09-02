@@ -116,14 +116,20 @@ function formatDateVi(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
-export function MonthKpiProgress({ kpi }: { kpi: MonthKpiSummary }) {
+export function MonthKpiProgress({
+  kpi,
+  scopeLabel,
+}: {
+  kpi: MonthKpiSummary;
+  scopeLabel?: string;
+}) {
   return (
     <div className="soft-card mb-5 px-5 py-4">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-foreground">KPI cả tháng</p>
           <p className="text-xs text-muted-foreground">
-            Lũy kế đến {formatDateVi(kpi.asOfDate)}
+            {scopeLabel ?? `Lũy kế đến ${formatDateVi(kpi.asOfDate)}`}
           </p>
         </div>
         <span className="rounded-full bg-lavender-soft px-3 py-1 text-xs font-medium text-primary">

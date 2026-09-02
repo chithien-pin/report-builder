@@ -41,7 +41,13 @@ export async function GET(req: NextRequest) {
         dataset.meta.dates[dataset.meta.dates.length - 1] ??
         dataset.target.planMonth + "-01";
 
-      const kpiSales = filterSalesByDateRange(dataset.sales, null, asOfDate);
+      const hasRange = Boolean(fromDate || toDate);
+      const periodFrom = hasRange ? fromDate ?? dataset.meta.dates[0] : null;
+      const periodTo = hasRange ? toDate ?? asOfDate : null;
+
+      const kpiSales = hasRange
+        ? filterSalesByDateRange(dataset.sales, periodFrom, periodTo)
+        : filterSalesByDateRange(dataset.sales, null, asOfDate);
       const monthKpi = buildMonthKpi(kpiSales, dataset.target, dataset.groupConfig);
 
       const fullSeries = buildDailySeries(dataset.sales, dataset.target, dataset.groupConfig);
@@ -51,9 +57,6 @@ export async function GET(req: NextRequest) {
         return true;
       });
 
-      const hasRange = Boolean(fromDate || toDate);
-      const periodFrom = hasRange ? fromDate ?? dataset.meta.dates[0] : null;
-      const periodTo = hasRange ? toDate ?? asOfDate : null;
       const categoryBreakdown = buildCategoryBreakdown(dataset.sales, dataset.target, {
         periodFrom,
         periodTo,
