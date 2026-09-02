@@ -154,6 +154,15 @@ export interface MonthKpiSummary {
   asOfDate: string;
 }
 
+/** KPI vận hành overview: DT, hóa đơn, AOV, UPT (theo khoảng ngày lọc). */
+export interface OverviewOpsKpi {
+  revenue: number;
+  orderCount: number;
+  itemCount: number;
+  aov: number;
+  upt: number;
+}
+
 export interface CategoryBreakdownRow {
   category: string;
   revenue: number;

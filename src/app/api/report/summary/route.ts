@@ -5,6 +5,7 @@ import { buildCategoryBreakdown } from "@/lib/report/category-breakdown";
 import { buildEmployeePerformance } from "@/lib/report/employee-performance";
 import { clampDateRange, filterSalesByDateRange } from "@/lib/report/date-range";
 import { buildProductCatalog, buildSkuSalesLines } from "@/lib/report/custom-product-groups";
+import { buildOverviewOpsKpi } from "@/lib/report/overview-ops-kpi";
 import { loadReportDataset, updateGroupConfig } from "@/lib/report/storage";
 import type { GroupConfig } from "@/lib/report/types";
 
@@ -49,6 +50,11 @@ export async function GET(req: NextRequest) {
         ? filterSalesByDateRange(dataset.sales, periodFrom, periodTo)
         : filterSalesByDateRange(dataset.sales, null, asOfDate);
       const monthKpi = buildMonthKpi(kpiSales, dataset.target, dataset.groupConfig);
+      const opsKpi = buildOverviewOpsKpi(
+        dataset.sales,
+        hasRange ? periodFrom : null,
+        hasRange ? periodTo : asOfDate,
+      );
 
       const fullSeries = buildDailySeries(dataset.sales, dataset.target, dataset.groupConfig);
       const series = fullSeries.filter((row) => {
@@ -79,6 +85,7 @@ export async function GET(req: NextRequest) {
         groupConfig: dataset.groupConfig,
         series,
         monthKpi,
+        opsKpi,
         categoryBreakdown,
         employeePerformance,
         dateRange: { fromDate, toDate },

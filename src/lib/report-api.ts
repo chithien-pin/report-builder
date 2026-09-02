@@ -5,6 +5,7 @@ import type {
   EmployeePerformance,
   GroupConfig,
   MonthKpiSummary,
+  OverviewOpsKpi,
   ProductCatalogItem,
   ReportDatasetMeta,
   SavedTargetMeta,
@@ -97,6 +98,7 @@ export async function fetchDailySeries(
   groupConfig: GroupConfig;
   series: DailyCompactRow[];
   monthKpi: MonthKpiSummary | null;
+  opsKpi: OverviewOpsKpi;
   categoryBreakdown: CategoryBreakdown;
   employeePerformance: EmployeePerformance;
   dateRange?: { fromDate: string | null; toDate: string | null };
@@ -113,6 +115,7 @@ export async function fetchDailySeries(
     groupConfig: GroupConfig;
     series: DailyCompactRow[];
     monthKpi: MonthKpiSummary | null;
+    opsKpi: OverviewOpsKpi;
     categoryBreakdown: CategoryBreakdown;
     employeePerformance: EmployeePerformance;
     dateRange?: { fromDate: string | null; toDate: string | null };

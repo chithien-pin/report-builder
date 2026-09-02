@@ -13,6 +13,7 @@ import type {
   EmployeePerformance,
   GroupConfig,
   MonthKpiSummary,
+  OverviewOpsKpi,
   ProductCatalogItem,
   ReportDatasetMeta,
   SavedTargetMeta,
@@ -33,6 +34,7 @@ interface ReportState {
   employeePerformance: EmployeePerformance | null;
   series: DailyCompactRow[];
   monthKpi: MonthKpiSummary | null;
+  opsKpi: OverviewOpsKpi | null;
   loading: boolean;
   error: string | null;
   commissionConfig: CommissionConfig;
@@ -41,6 +43,8 @@ interface ReportState {
   customProductGroups: CustomProductGroup[];
   productCatalog: ProductCatalogItem[];
   skuLines: SkuSalesLine[];
+  /** Số khách ghé thăm theo key khoảng ngày (để tính CR). */
+  visitorCounts: Record<string, number>;
 
   setUploadResult: (
     datasetId: string,
@@ -56,6 +60,7 @@ interface ReportState {
   setEmployeePerformance: (performance: EmployeePerformance | null) => void;
   setSeries: (series: DailyCompactRow[]) => void;
   setMonthKpi: (kpi: MonthKpiSummary | null) => void;
+  setOpsKpi: (kpi: OverviewOpsKpi | null) => void;
   setGroupConfig: (config: GroupConfig) => void;
   setCommissionConfig: (config: CommissionConfig) => void;
   setOverviewDateRange: (fromDate: string | null, toDate: string | null) => void;
@@ -63,6 +68,7 @@ interface ReportState {
   upsertCustomProductGroup: (group: CustomProductGroup) => void;
   removeCustomProductGroup: (id: string) => void;
   setSkuData: (catalog: ProductCatalogItem[], lines: SkuSalesLine[]) => void;
+  setVisitorCount: (rangeKey: string, count: number) => void;
   setMeta: (meta: ReportDatasetMeta) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -83,6 +89,7 @@ const initial = {
   employeePerformance: null as EmployeePerformance | null,
   series: [] as DailyCompactRow[],
   monthKpi: null as MonthKpiSummary | null,
+  opsKpi: null as OverviewOpsKpi | null,
   loading: false,
   error: null as string | null,
   commissionConfig: createDefaultCommissionConfig(),
@@ -91,6 +98,7 @@ const initial = {
   customProductGroups: [] as CustomProductGroup[],
   productCatalog: [] as ProductCatalogItem[],
   skuLines: [] as SkuSalesLine[],
+  visitorCounts: {} as Record<string, number>,
 };
 
 export const useReportStore = create<ReportState>()(
@@ -111,6 +119,7 @@ export const useReportStore = create<ReportState>()(
           employeePerformance: null,
           series: [],
           monthKpi: null,
+          opsKpi: null,
           overviewFromDate: null,
           overviewToDate: null,
           productCatalog: [],
@@ -126,6 +135,7 @@ export const useReportStore = create<ReportState>()(
       setEmployeePerformance: (performance) => set({ employeePerformance: performance }),
       setSeries: (series) => set({ series }),
       setMonthKpi: (kpi) => set({ monthKpi: kpi }),
+      setOpsKpi: (kpi) => set({ opsKpi: kpi }),
       setGroupConfig: (config) => set({ groupConfig: config }),
       setCommissionConfig: (config) => set({ commissionConfig: config }),
       setOverviewDateRange: (fromDate, toDate) =>
@@ -146,6 +156,10 @@ export const useReportStore = create<ReportState>()(
           customProductGroups: state.customProductGroups.filter((g) => g.id !== id),
         })),
       setSkuData: (catalog, lines) => set({ productCatalog: catalog, skuLines: lines }),
+      setVisitorCount: (rangeKey, count) =>
+        set((state) => ({
+          visitorCounts: { ...state.visitorCounts, [rangeKey]: Math.max(0, count) },
+        })),
       setMeta: (meta) => set({ meta }),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
@@ -156,6 +170,7 @@ export const useReportStore = create<ReportState>()(
           savedTarget: state.savedTarget,
           commissionConfig: state.commissionConfig,
           customProductGroups: state.customProductGroups,
+          visitorCounts: state.visitorCounts,
         })),
 
       reset: () =>
@@ -163,11 +178,12 @@ export const useReportStore = create<ReportState>()(
           ...initial,
           commissionConfig: state.commissionConfig,
           customProductGroups: state.customProductGroups,
+          visitorCounts: state.visitorCounts,
         })),
     }),
     {
       name: "reportbtmh-bao-cao-ngay",
-      version: 6,
+      version: 7,
       migrate: (persisted, version) => {
         const state = persisted as {
           viewMode?: string;
@@ -175,6 +191,7 @@ export const useReportStore = create<ReportState>()(
           overviewFromDate?: string | null;
           overviewToDate?: string | null;
           customProductGroups?: CustomProductGroup[];
+          visitorCounts?: Record<string, number>;
         };
         if (version < 3 && state.viewMode === "all") {
           state.viewMode = "overview";
@@ -189,6 +206,9 @@ export const useReportStore = create<ReportState>()(
         if (version < 6) {
           state.customProductGroups = [];
         }
+        if (version < 7) {
+          state.visitorCounts = {};
+        }
         return persisted as typeof initial;
       },
       partialize: (state) => ({
@@ -202,6 +222,7 @@ export const useReportStore = create<ReportState>()(
         overviewFromDate: state.overviewFromDate,
         overviewToDate: state.overviewToDate,
         customProductGroups: state.customProductGroups,
+        visitorCounts: state.visitorCounts,
       }),
     },
   ),

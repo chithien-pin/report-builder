@@ -21,6 +21,7 @@ import { EmployeePerformanceCard } from "@/components/report/employee-performanc
 import { GroupConfigDialog } from "@/components/report/group-config-dialog";
 import { MonthKpiProgress } from "@/components/report/month-kpi-progress";
 import { OverviewDateRangeDialog } from "@/components/report/overview-date-range-dialog";
+import { OverviewOpsKpiCard } from "@/components/report/overview-ops-kpi-card";
 import { ReportCardNav } from "@/components/report/report-card-nav";
 import { StoreCategoryTargetCard } from "@/components/report/store-category-target-card";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,7 @@ export function ReportScreen() {
   const employeePerformance = useReportStore((s) => s.employeePerformance);
   const series = useReportStore((s) => s.series);
   const monthKpi = useReportStore((s) => s.monthKpi);
+  const opsKpi = useReportStore((s) => s.opsKpi);
   const loading = useReportStore((s) => s.loading);
   const error = useReportStore((s) => s.error);
   const commissionConfig = useReportStore((s) => s.commissionConfig);
@@ -124,6 +126,7 @@ export function ReportScreen() {
   const customProductGroups = useReportStore((s) => s.customProductGroups);
   const productCatalog = useReportStore((s) => s.productCatalog);
   const skuLines = useReportStore((s) => s.skuLines);
+  const visitorCounts = useReportStore((s) => s.visitorCounts);
 
   const setSelectedDate = useReportStore((s) => s.setSelectedDate);
   const setViewMode = useReportStore((s) => s.setViewMode);
@@ -132,12 +135,14 @@ export function ReportScreen() {
   const setEmployeePerformance = useReportStore((s) => s.setEmployeePerformance);
   const setSeries = useReportStore((s) => s.setSeries);
   const setMonthKpi = useReportStore((s) => s.setMonthKpi);
+  const setOpsKpi = useReportStore((s) => s.setOpsKpi);
   const setGroupConfig = useReportStore((s) => s.setGroupConfig);
   const setCommissionConfig = useReportStore((s) => s.setCommissionConfig);
   const setOverviewDateRange = useReportStore((s) => s.setOverviewDateRange);
   const upsertCustomProductGroup = useReportStore((s) => s.upsertCustomProductGroup);
   const removeCustomProductGroup = useReportStore((s) => s.removeCustomProductGroup);
   const setSkuData = useReportStore((s) => s.setSkuData);
+  const setVisitorCount = useReportStore((s) => s.setVisitorCount);
   const setLoading = useReportStore((s) => s.setLoading);
   const setError = useReportStore((s) => s.setError);
   const clearSales = useReportStore((s) => s.clearSales);
@@ -152,6 +157,8 @@ export function ReportScreen() {
     overviewFromDate,
     overviewToDate,
   );
+  const visitorRangeKey = `${overviewFromDate ?? ""}|${overviewToDate ?? ""}`;
+  const visitorCount = visitorCounts[visitorRangeKey] ?? 0;
 
   const commissionForecast = useMemo(() => {
     if (!employeePerformance) return null;
@@ -169,6 +176,7 @@ export function ReportScreen() {
 
   const overviewNavItems = useMemo(() => {
     const items: { id: string; label: string }[] = [];
+    if (opsKpi) items.push({ id: "report-card-ops-kpi", label: "Chỉ số vận hành" });
     if (monthKpi) items.push({ id: "report-card-month-kpi", label: "Tiến độ tháng" });
     if (
       storeCategoryTargets.length > 0 ||
@@ -190,6 +198,7 @@ export function ReportScreen() {
     customProductGroups.length,
     employeePerformance,
     monthKpi,
+    opsKpi,
     series.length,
     storeCategoryTargets.length,
   ]);
@@ -235,6 +244,7 @@ export function ReportScreen() {
       });
       setSeries(res.series);
       setMonthKpi(res.monthKpi);
+      setOpsKpi(res.opsKpi ?? null);
       setCategoryBreakdown(res.categoryBreakdown);
       setEmployeePerformance(res.employeePerformance);
       setGroupConfig(res.groupConfig);
@@ -254,6 +264,7 @@ export function ReportScreen() {
     setGroupConfig,
     setLoading,
     setMonthKpi,
+    setOpsKpi,
     setSeries,
     setSkuData,
   ]);
@@ -387,6 +398,16 @@ export function ReportScreen() {
         {isOverview && (
           <>
             <ReportCardNav items={overviewNavItems} />
+            {opsKpi && (
+              <div id="report-card-ops-kpi" className="scroll-mt-4">
+                <OverviewOpsKpiCard
+                  kpi={opsKpi}
+                  scopeLabel={overviewScopeLabel}
+                  visitorCount={visitorCount}
+                  onVisitorCountChange={(count) => setVisitorCount(visitorRangeKey, count)}
+                />
+              </div>
+            )}
             {monthKpi && (
               <div id="report-card-month-kpi" className="scroll-mt-4">
                 <MonthKpiProgress

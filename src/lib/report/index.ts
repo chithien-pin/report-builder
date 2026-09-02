@@ -20,6 +20,7 @@ export { buildEmployeeTargetDetails, getEmployeeTargetDetail, buildStoreTargetBr
 export { buildCommissionForecast, buildTvvCommission } from "./commission";
 export { createDefaultCommissionConfig, cloneDefaultRates } from "./commission-defaults";
 export { filterSalesByDateRange, clampDateRange } from "./date-range";
+export { buildOverviewOpsKpi } from "./overview-ops-kpi";
 export {
   buildProductCatalog,
   buildSkuSalesLines,
