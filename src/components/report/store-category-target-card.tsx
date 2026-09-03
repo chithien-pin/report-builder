@@ -31,11 +31,13 @@ function formatDateVi(iso: string): string {
 function BreakdownRowView({
   row,
   hideSl,
+  revenueSharePct,
   onClick,
   actions,
 }: {
   row: EmployeeTargetBreakdownRow;
   hideSl: boolean;
+  revenueSharePct: number | null;
   onClick?: () => void;
   actions?: ReactNode;
 }) {
@@ -72,6 +74,9 @@ function BreakdownRowView({
         )}
       >
         {dtPctRow != null ? formatPctVi(dtPctRow) : "—"}
+      </td>
+      <td className="px-3 py-2.5 text-right font-medium tabular-nums text-foreground">
+        {revenueSharePct != null ? formatPctVi(revenueSharePct) : "—"}
       </td>
       <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">
         {hideSl ? (
@@ -126,6 +131,12 @@ export function StoreCategoryTargetCard({
       })),
     [customGroups, skuLines],
   );
+  const totalRevenue = useMemo(
+    () =>
+      rows.reduce((sum, row) => sum + row.dtActual, 0) +
+      customRows.reduce((sum, item) => sum + item.row.dtActual, 0),
+    [customRows, rows],
+  );
 
   return (
     <>
@@ -159,17 +170,19 @@ export function StoreCategoryTargetCard({
             {customGroups.length > 0
               ? " · bấm hàng nhóm custom để xem chi tiết theo ngày / nhân viên"
               : ""}
+            {" · tỉ trọng = doanh thu thực / tổng doanh thu hiển thị"}
           </p>
         </div>
 
         <div className="overflow-auto px-2 pb-2 pt-2">
           <div className="overflow-auto rounded-xl border border-border/60">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
+            <table className="w-full min-w-[760px] border-collapse text-sm">
               <thead>
                 <tr className="bg-lavender-soft/50 text-left text-xs text-muted-foreground">
                   <th className="px-3 py-2.5 font-medium">Danh mục</th>
                   <th className="px-3 py-2.5 text-right font-medium">Doanh thu thực / Kế hoạch</th>
                   <th className="px-3 py-2.5 text-right font-medium">% Doanh thu</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Tỉ trọng</th>
                   <th className="px-3 py-2.5 text-right font-medium">Sản lượng thực / Kế hoạch</th>
                   <th className="px-3 py-2.5 text-right font-medium">% Sản lượng</th>
                 </tr>
@@ -177,7 +190,7 @@ export function StoreCategoryTargetCard({
               <tbody>
                 {rows.length === 0 && customRows.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                    <td colSpan={6} className="px-3 py-6 text-center text-sm text-muted-foreground">
                       Chưa có dữ liệu ngành hàng. Bấm &quot;Nhóm MA HANG&quot; để tạo nhóm theo mã sản phẩm.
                     </td>
                   </tr>
@@ -187,6 +200,7 @@ export function StoreCategoryTargetCard({
                     key={row.label}
                     row={row}
                     hideSl={isTrangSucKhacCategory(row.label)}
+                    revenueSharePct={totalRevenue > 0 ? row.dtActual / totalRevenue : null}
                   />
                 ))}
                 {customRows.map(({ group, row }) => (
@@ -194,6 +208,7 @@ export function StoreCategoryTargetCard({
                     key={group.id}
                     row={row}
                     hideSl={false}
+                    revenueSharePct={totalRevenue > 0 ? row.dtActual / totalRevenue : null}
                     onClick={() => setDetailGroup(group)}
                     actions={
                       <span
