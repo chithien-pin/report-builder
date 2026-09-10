@@ -43,7 +43,7 @@ interface ReportState {
   customProductGroups: CustomProductGroup[];
   productCatalog: ProductCatalogItem[];
   skuLines: SkuSalesLine[];
-  /** Số khách ghé thăm theo key khoảng ngày (để tính CR). */
+  /** Số khách ghé thăm theo ngày YYYY-MM-DD (để tính CR). */
   visitorCounts: Record<string, number>;
 
   setUploadResult: (
@@ -68,7 +68,8 @@ interface ReportState {
   upsertCustomProductGroup: (group: CustomProductGroup) => void;
   removeCustomProductGroup: (id: string) => void;
   setSkuData: (catalog: ProductCatalogItem[], lines: SkuSalesLine[]) => void;
-  setVisitorCount: (rangeKey: string, count: number) => void;
+  /** null = xóa giá trị ngày (chưa nhập). */
+  setVisitorCount: (date: string, count: number | null) => void;
   setMeta: (meta: ReportDatasetMeta) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -156,10 +157,16 @@ export const useReportStore = create<ReportState>()(
           customProductGroups: state.customProductGroups.filter((g) => g.id !== id),
         })),
       setSkuData: (catalog, lines) => set({ productCatalog: catalog, skuLines: lines }),
-      setVisitorCount: (rangeKey, count) =>
-        set((state) => ({
-          visitorCounts: { ...state.visitorCounts, [rangeKey]: Math.max(0, count) },
-        })),
+      setVisitorCount: (date, count) =>
+        set((state) => {
+          const next = { ...state.visitorCounts };
+          if (count == null) {
+            delete next[date];
+          } else {
+            next[date] = Math.max(0, Math.floor(count));
+          }
+          return { visitorCounts: next };
+        }),
       setMeta: (meta) => set({ meta }),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
@@ -183,7 +190,7 @@ export const useReportStore = create<ReportState>()(
     }),
     {
       name: "reportbtmh-bao-cao-ngay",
-      version: 7,
+      version: 8,
       migrate: (persisted, version) => {
         const state = persisted as {
           viewMode?: string;
@@ -208,6 +215,17 @@ export const useReportStore = create<ReportState>()(
         }
         if (version < 7) {
           state.visitorCounts = {};
+        }
+        if (version < 8) {
+          // Drop range keys ("from|to"); keep only YYYY-MM-DD day keys.
+          const prev = state.visitorCounts ?? {};
+          const next: Record<string, number> = {};
+          for (const [key, value] of Object.entries(prev)) {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(key) && Number.isFinite(value)) {
+              next[key] = Math.max(0, Math.floor(value));
+            }
+          }
+          state.visitorCounts = next;
         }
         return persisted as typeof initial;
       },

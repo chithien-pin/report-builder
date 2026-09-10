@@ -157,8 +157,18 @@ export function ReportScreen() {
     overviewFromDate,
     overviewToDate,
   );
-  const visitorRangeKey = `${overviewFromDate ?? ""}|${overviewToDate ?? ""}`;
-  const visitorCount = visitorCounts[visitorRangeKey] ?? 0;
+  const visitorSummary = useMemo(() => {
+    let total = 0;
+    let missing = 0;
+    for (const row of series) {
+      if (Object.prototype.hasOwnProperty.call(visitorCounts, row.date)) {
+        total += visitorCounts[row.date] ?? 0;
+      } else {
+        missing += 1;
+      }
+    }
+    return { total, missing };
+  }, [series, visitorCounts]);
 
   const commissionForecast = useMemo(() => {
     if (!employeePerformance) return null;
@@ -403,8 +413,13 @@ export function ReportScreen() {
                 <OverviewOpsKpiCard
                   kpi={opsKpi}
                   scopeLabel={overviewScopeLabel}
-                  visitorCount={visitorCount}
-                  onVisitorCountChange={(count) => setVisitorCount(visitorRangeKey, count)}
+                  visitorCount={visitorSummary.total}
+                  missingVisitorDays={visitorSummary.missing}
+                  onOpenAllDays={() => {
+                    document
+                      .getElementById("report-card-all-days")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
                 />
               </div>
             )}
@@ -462,6 +477,8 @@ export function ReportScreen() {
                 series={series}
                 selectedDate={selectedDate}
                 onSelectDate={openDayDetail}
+                visitorCounts={visitorCounts}
+                onVisitorCountChange={setVisitorCount}
               />
             </div>
           </>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
+import { Input } from "@/components/ui/input";
 import type { DailyCompactRow } from "@/lib/report/types";
 import { cn, formatNumber } from "@/lib/utils";
 
@@ -20,12 +21,17 @@ export function AllDaysTable({
   series,
   selectedDate,
   onSelectDate,
+  visitorCounts,
+  onVisitorCountChange,
 }: {
   series: DailyCompactRow[];
   selectedDate: string | null;
   onSelectDate: (date: string) => void;
+  visitorCounts: Record<string, number>;
+  onVisitorCountChange: (date: string, count: number | null) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const missingVisitors = series.filter((row) => !(row.date in visitorCounts)).length;
+  const [open, setOpen] = useState(missingVisitors > 0);
 
   return (
     <div className="soft-card mb-5 overflow-hidden">
@@ -40,6 +46,11 @@ export function AllDaysTable({
         <span className="rounded-full bg-lavender-soft px-2.5 py-0.5 text-xs font-medium text-primary">
           {series.length} ngày
         </span>
+        {missingVisitors > 0 && (
+          <span className="rounded-full bg-coral-soft px-2.5 py-0.5 text-xs font-medium text-coral">
+            Thiếu khách {missingVisitors} ngày
+          </span>
+        )}
         <ChevronDown
           className={cn(
             "ml-auto h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200",
@@ -51,10 +62,11 @@ export function AllDaysTable({
 
       {open && (
         <div className="overflow-auto">
-          <table className="min-w-[720px] w-full border-collapse text-sm">
+          <table className="min-w-[820px] w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-4 py-3.5 font-medium">Ngày</th>
+                <th className="px-3 py-3.5 text-right font-medium">Khách</th>
                 <th className="px-3 py-3.5 text-right font-medium">SL thực tế</th>
                 <th className="px-3 py-3.5 text-right font-medium">SL chỉ tiêu</th>
                 <th className="px-3 py-3.5 text-right font-medium">% SL</th>
@@ -68,16 +80,39 @@ export function AllDaysTable({
                 const active = row.date === selectedDate;
                 const slGood = row.slPct != null && row.slPct >= 1;
                 const dtGood = row.dtPct != null && row.dtPct >= 1;
+                const hasVisitor = row.date in visitorCounts;
                 return (
                   <tr
                     key={row.date}
                     className={cn(
                       "cursor-pointer border-b border-border/60 transition-colors hover:bg-lavender-soft/50",
                       active && "bg-lavender-soft",
+                      !hasVisitor && "bg-coral-soft/20",
                     )}
                     onClick={() => onSelectDate(row.date)}
                   >
                     <td className="px-4 py-3 font-medium">{formatDateVi(row.date)}</td>
+                    <td
+                      className="px-3 py-2 text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Input
+                        type="number"
+                        min={0}
+                        inputMode="numeric"
+                        aria-label={`Khách ghé thăm ${formatDateVi(row.date)}`}
+                        className={cn(
+                          "ml-auto h-8 w-20 text-right tabular-nums",
+                          !hasVisitor && "border-coral/40 bg-coral-soft/30",
+                        )}
+                        value={hasVisitor ? String(visitorCounts[row.date]) : ""}
+                        placeholder="—"
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, "");
+                          onVisitorCountChange(row.date, raw === "" ? null : Number(raw));
+                        }}
+                      />
+                    </td>
                     <td className="px-3 py-3 text-right tabular-nums">{formatNumber(row.slActual)}</td>
                     <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">
                       {formatNumber(row.slTarget)}

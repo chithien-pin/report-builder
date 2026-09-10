@@ -3,7 +3,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { Boxes, Percent, Receipt, TrendingUp, Wallet } from "lucide-react";
 
-import { Input } from "@/components/ui/input";
 import type { OverviewOpsKpi } from "@/lib/report/types";
 import { cn, formatMillionTr, formatNumber, formatPctVi, formatVnd } from "@/lib/utils";
 
@@ -62,12 +61,14 @@ export function OverviewOpsKpiCard({
   kpi,
   scopeLabel,
   visitorCount,
-  onVisitorCountChange,
+  missingVisitorDays,
+  onOpenAllDays,
 }: {
   kpi: OverviewOpsKpi;
   scopeLabel?: string;
   visitorCount: number;
-  onVisitorCountChange: (count: number) => void;
+  missingVisitorDays: number;
+  onOpenAllDays?: () => void;
 }) {
   const cr = visitorCount > 0 ? kpi.orderCount / visitorCount : null;
 
@@ -84,7 +85,7 @@ export function OverviewOpsKpiCard({
           )}
         </div>
         <p className="mt-1.5 text-xs text-muted-foreground">
-          Tổng hợp theo khoảng ngày đang lọc · CR cần nhập số khách ghé thăm
+          Tổng hợp theo khoảng ngày đang lọc · khách ghé thăm nhập theo từng ngày ở «Tất cả ngày»
         </p>
       </div>
 
@@ -123,7 +124,7 @@ export function OverviewOpsKpiCard({
           hint={
             visitorCount > 0
               ? `${formatNumber(kpi.orderCount)} / ${formatNumber(visitorCount)} khách`
-              : "Nhập số khách ghé thăm"
+              : "Chưa có khách theo ngày"
           }
           icon={Percent}
           tone="lavender"
@@ -135,20 +136,32 @@ export function OverviewOpsKpiCard({
             </div>
             <div className="rounded-xl bg-muted/40 px-2.5 py-2">
               <p className="text-[10px] text-muted-foreground">Khách ghé thăm</p>
-              <Input
-                type="number"
-                min={0}
-                inputMode="numeric"
-                className="mt-0.5 h-7 border-0 bg-transparent px-0 text-sm font-semibold shadow-none focus-visible:ring-0"
-                value={visitorCount || ""}
-                placeholder="0"
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/\D/g, "");
-                  onVisitorCountChange(raw ? Number(raw) : 0);
-                }}
-              />
+              <p className="font-semibold tabular-nums">
+                {visitorCount > 0 || missingVisitorDays === 0
+                  ? formatNumber(visitorCount)
+                  : "—"}
+              </p>
             </div>
           </div>
+          {missingVisitorDays > 0 ? (
+            <p className="mt-2 text-xs text-coral">
+              Thiếu {missingVisitorDays} ngày
+              {onOpenAllDays ? (
+                <>
+                  {" · "}
+                  <button
+                    type="button"
+                    className="font-medium underline underline-offset-2"
+                    onClick={onOpenAllDays}
+                  >
+                    Nhập ở Tất cả ngày
+                  </button>
+                </>
+              ) : null}
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">Đã nhập đủ theo ngày đang lọc</p>
+          )}
         </MetricTile>
       </div>
     </div>
