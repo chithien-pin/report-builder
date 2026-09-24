@@ -25,11 +25,13 @@ function formatDateVi(iso: string): string {
 }
 
 function isTrangSucKhacCategory(label: string): boolean {
-  return label
+  const n = label
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .includes("trang suc khac");
+    .replace(/\s+/g, " ")
+    .trim();
+  return n === "trang suc khac" || n.startsWith("trang suc khac ");
 }
 
 function TargetProgressBar({

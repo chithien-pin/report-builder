@@ -59,20 +59,23 @@ export const CATEGORY_TARGET_HINTS: Record<string, string[]> = {
   "Vàng tích lũy": ["vang tt"],
   "Bạc tích lũy": ["bac tt"],
   "TS vàng ta": ["trang suc vang ta"],
-  "TS vàng tây": ["trang suc khac"],
-  BST: ["trang suc khac"],
-  "Hỗn hợp": ["trang suc khac"],
-  Khác: ["trang suc khac"],
-  "Nguyên liệu": ["trang suc khac"],
+  BST: ["ts y+bst", "ts y", "bst"],
+  "TS vàng tây": ["ts vang tay khac", "vang tay khac"],
+  "Hỗn hợp": ["hon hop"],
+  Khác: ["hon hop", "trang suc khac"],
+  "Nguyên liệu": ["hon hop", "trang suc khac"],
 };
 
 const CATEGORY_SL_HINTS: Record<string, string[]> = {
   "Vàng tích lũy": ["vang tt (chi)", "vang tt"],
   "Bạc tích lũy": ["bac tt (chi)", "bac tt"],
   "TS vàng ta": ["trang suc vang ta (chi)", "trang suc vang ta"],
+  BST: ["ts y+bst (chiec)", "ts y+bst"],
+  "TS vàng tây": ["ts vang tay khac (chiec)", "ts vang tay khac"],
+  "Hỗn hợp": ["hon hop (chiec)", "hon hop"],
 };
 
-const FALLBACK_HINTS = ["trang suc khac"];
+const FALLBACK_HINTS = ["hon hop", "trang suc khac"];
 
 export function resolveCategoryTargetColumn(
   category: string,

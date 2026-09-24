@@ -3,6 +3,7 @@ import type {
   EmployeeTargetDetail,
   EmployeeTargetPlan,
   SalesRow,
+  TargetData,
 } from "./types";
 import { pct } from "./targets";
 
@@ -16,9 +17,34 @@ function productCategoryToDtLabel(category: string): string {
       return "Bạc TT";
     case "TS vàng ta":
       return "Trang sức vàng ta";
+    case "BST":
+      return "TS Ý+BST";
+    case "TS vàng tây":
+      return "TS vàng Tây Khác";
+    case "Hỗn hợp":
+      return "Hỗn Hợp";
     default:
       return "Trang sức khác";
   }
+}
+
+const SPLIT_OTHER_LABELS = new Set([
+  "TS Ý+BST",
+  "TS vàng Tây Khác",
+  "Hỗn Hợp",
+  "Trang sức khác",
+]);
+
+/** Map sales category → label cột DT trong file target (hỗ trợ schema cũ/mới). */
+function mapCategoryToPlanLabel(category: string, planLabels: Set<string>): string {
+  const preferred = productCategoryToDtLabel(category);
+  if (planLabels.size === 0 || planLabels.has(preferred)) return preferred;
+
+  if (SPLIT_OTHER_LABELS.has(preferred)) {
+    if (planLabels.has("Trang sức khác")) return "Trang sức khác";
+    if (preferred === "Trang sức khác" && planLabels.has("Hỗn Hợp")) return "Hỗn Hợp";
+  }
+  return preferred;
 }
 
 /** Đơn vị SL mặc định theo danh mục bán hàng (chỉ → trọng lượng vàng). */
@@ -73,7 +99,8 @@ function rowRevenue(r: SalesRow): number {
 
 /** Sản lượng tính lương: chỉ (trọng lượng vàng) hoặc chiếc (số lượng) theo danh mục. */
 export function payrollSlForRow(r: SalesRow, slUnitsByLabel?: Map<string, SlUnit>): number {
-  const dtLabel = productCategoryToDtLabel(r.productCategory || "Khác");
+  const planLabels = slUnitsByLabel ? new Set(slUnitsByLabel.keys()) : new Set<string>();
+  const dtLabel = mapCategoryToPlanLabel(r.productCategory || "Khác", planLabels);
   const unit =
     slUnitsByLabel?.get(dtLabel) ??
     defaultSlUnitForCategory(r.productCategory || "Khác");
@@ -195,8 +222,9 @@ export function buildEmployeeTargetDetails(
 
     const dtByLabel = new Map<string, number>();
     const slByLabel = new Map<string, number>();
+    const planLabels = new Set((plan?.dtBreakdown ?? []).map((d) => d.label));
     for (const r of planSales.filter((row) => (row.employeeName || "Không xác định") === name)) {
-      const label = productCategoryToDtLabel(r.productCategory || "Khác");
+      const label = mapCategoryToPlanLabel(r.productCategory || "Khác", planLabels);
       const unit =
         slUnits.get(label) ?? defaultSlUnitForCategory(r.productCategory || "Khác");
       dtByLabel.set(label, (dtByLabel.get(label) ?? 0) + rowRevenue(r));
@@ -246,14 +274,84 @@ const STORE_BREAKDOWN_ORDER = [
   "Vàng TT",
   "Bạc TT",
   "Trang sức vàng ta",
+  "TS Ý+BST",
+  "TS vàng Tây Khác",
+  "Hỗn Hợp",
   "Trang sức khác",
 ];
 
-/** Cộng chỉ tiêu / thực tế theo ngành hàng của toàn cửa hàng (từ breakdown từng TVV). */
+function baseColumnLabel(label: string): string {
+  return (label.split("·")[0] ?? label).replace(/\s+/g, " ").trim();
+}
+
+/** KH DT theo ngành từ hàng TỔNG (monthTotals) — khớp tổng cửa hàng. */
+function dtPlansFromMonthTotals(target: TargetData): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const col of target.columns) {
+    if (col.kind !== "dt") continue;
+    const label = baseColumnLabel(col.label);
+    if (!label || /^tổng$/i.test(label)) continue;
+    map.set(label, (map.get(label) ?? 0) + (target.monthTotals[col.key] ?? 0));
+  }
+  return map;
+}
+
+/** KH SL tính lương theo ngành — cộng mọi TVV trong file target. */
+function slPlansFromEmployeePlans(plans: EmployeeTargetPlan[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const plan of plans) {
+    plan.dtBreakdown.forEach((dt, idx) => {
+      const label = dt.label;
+      map.set(label, (map.get(label) ?? 0) + (plan.slBreakdown[idx]?.value ?? 0));
+    });
+  }
+  return map;
+}
+
+/**
+ * Tiến độ ngành hàng toàn cửa hàng.
+ * - Kế hoạch DT: lấy từ hàng TỔNG (đảm bảo 6 cột cộng = Tổng)
+ * - Kế hoạch SL: cộng mọi TVV trong target
+ * - Thực tế: cộng từ breakdown từng TVV có doanh số
+ */
 export function buildStoreTargetBreakdown(
   details: EmployeeTargetDetail[],
+  target?: TargetData | null,
 ): EmployeeTargetBreakdownRow[] {
   const map = new Map<string, EmployeeTargetBreakdownRow>();
+
+  const dtPlans = target ? dtPlansFromMonthTotals(target) : new Map<string, number>();
+  const slPlans = target
+    ? slPlansFromEmployeePlans(target.employeePlans ?? [])
+    : new Map<string, number>();
+
+  for (const [label, dtPlan] of dtPlans) {
+    map.set(label, {
+      label,
+      dtActual: 0,
+      dtPlan,
+      slActual: 0,
+      slPlan: slPlans.get(label) ?? 0,
+    });
+  }
+
+  // Nếu chưa có monthTotals (edge), seed từ plans TVV
+  if (map.size === 0 && target?.employeePlans?.length) {
+    for (const plan of target.employeePlans) {
+      plan.dtBreakdown.forEach((dt, idx) => {
+        const prev = map.get(dt.label) ?? {
+          label: dt.label,
+          dtActual: 0,
+          dtPlan: 0,
+          slActual: 0,
+          slPlan: 0,
+        };
+        prev.dtPlan += dt.value;
+        prev.slPlan += plan.slBreakdown[idx]?.value ?? 0;
+        map.set(dt.label, prev);
+      });
+    }
+  }
 
   for (const detail of details) {
     for (const row of detail.breakdown) {
@@ -265,9 +363,16 @@ export function buildStoreTargetBreakdown(
         slPlan: 0,
       };
       prev.dtActual += row.dtActual;
-      prev.dtPlan += row.dtPlan;
       prev.slActual += row.slActual;
-      prev.slPlan += row.slPlan;
+      // Fallback khi không có target: cộng KH từ từng TVV (hành vi cũ)
+      if (!target) {
+        prev.dtPlan += row.dtPlan;
+        prev.slPlan += row.slPlan;
+      } else if (!map.has(row.label)) {
+        // Nhãn chỉ có ở TVV (không có trong TỔNG) — giữ KH từ TVV
+        prev.dtPlan += row.dtPlan;
+        prev.slPlan += row.slPlan;
+      }
       map.set(row.label, prev);
     }
   }

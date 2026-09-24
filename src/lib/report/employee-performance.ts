@@ -1,4 +1,4 @@
-import { buildEmployeeTargetDetails } from "./employee-targets";
+import { buildEmployeeTargetDetails, buildStoreTargetBreakdown } from "./employee-targets";
 import type {
   EmployeeInsight,
   EmployeePerformance,
@@ -181,6 +181,7 @@ export function buildEmployeePerformance(
     employees,
     insights: buildInsights(employees),
     targetDetails,
+    storeCategoryBreakdown: buildStoreTargetBreakdown(targetDetails, opts.target),
     asOfDate: opts.asOfDate,
   };
 }

@@ -71,11 +71,19 @@ const DEFAULT_TARGET_HINTS: Record<string, { dt?: string[]; sl?: string[] }> = {
   },
   [gid("Vàng TS 24K")]: {
     dt: ["trang suc vang ta"],
-    sl: ["trang suc vang ta (chi)"],
+    sl: ["trang suc vang ta (chi)", "trang suc vang ta (chiec)", "trang suc vang ta"],
   },
   [gid("TS vàng tây")]: {
-    dt: ["trang suc khac"],
-    sl: ["trang suc khac (chiec)"],
+    dt: ["ts y+bst", "ts y", "ts vang tay khac", "vang tay khac", "trang suc khac"],
+    sl: [
+      "ts y+bst (chiec)",
+      "ts vang tay khac (chiec)",
+      "trang suc khac (chiec)",
+    ],
+  },
+  [gid("Khác")]: {
+    dt: ["hon hop", "trang suc khac"],
+    sl: ["hon hop (chiec)", "trang suc khac (chiec)"],
   },
 };
 

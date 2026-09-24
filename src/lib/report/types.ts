@@ -235,6 +235,8 @@ export interface EmployeePerformance {
   employees: EmployeePerformanceRow[];
   insights: EmployeeInsight[];
   targetDetails: EmployeeTargetDetail[];
+  /** Tiến độ ngành hàng cửa hàng — KH lấy từ TỔNG target. */
+  storeCategoryBreakdown: EmployeeTargetBreakdownRow[];
   asOfDate: string;
 }
 

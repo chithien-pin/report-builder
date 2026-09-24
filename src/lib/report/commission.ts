@@ -54,10 +54,25 @@ function normLabel(value: string): string {
 export function commissionGroupForLabel(label: string): CommissionGroupKey | null {
   const n = normLabel(label);
   if (n.includes("vang tt") || n.includes("bac tt")) return "tich-tru";
-  if (n.includes("trang suc vang ta") || n.includes("ts vang ta") || n.includes("ts24k")) {
+  // "vang ta" must not match "vang tay"
+  if (
+    n.includes("trang suc vang ta") ||
+    n.includes("ts24k") ||
+    (n.includes("vang ta") && !n.includes("vang tay"))
+  ) {
     return "ts24k";
   }
-  if (n.includes("trang suc khac") || n.includes("ts khac")) return "ts-khac";
+  if (
+    n.includes("trang suc khac") ||
+    n.includes("ts khac") ||
+    n.includes("ts y+bst") ||
+    n.includes("ts y") ||
+    n.includes("bst") ||
+    n.includes("vang tay") ||
+    n.includes("hon hop")
+  ) {
+    return "ts-khac";
+  }
   return null;
 }
 

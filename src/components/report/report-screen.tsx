@@ -180,6 +180,9 @@ export function ReportScreen() {
   }, [commissionConfig, employeePerformance, monthKpi]);
 
   const storeCategoryTargets = useMemo(() => {
+    if (employeePerformance?.storeCategoryBreakdown?.length) {
+      return employeePerformance.storeCategoryBreakdown;
+    }
     if (!employeePerformance?.targetDetails.length) return [];
     return buildStoreTargetBreakdown(employeePerformance.targetDetails);
   }, [employeePerformance]);
@@ -447,7 +450,7 @@ export function ReportScreen() {
                 />
               </div>
             )}
-            {categoryBreakdown && (
+            {/* {categoryBreakdown && (
               <div id="report-card-category" className="scroll-mt-4">
                 {isStaleCategoryBreakdown(categoryBreakdown) && <CategoryStaleWarning />}
                 <CategoryBreakdownCard
@@ -455,7 +458,7 @@ export function ReportScreen() {
                   scopeLabel={overviewScopeLabel}
                 />
               </div>
-            )}
+            )} */}
             {employeePerformance && employeePerformance.employees.length > 0 && (
               <div id="report-card-employees" className="scroll-mt-4">
                 <EmployeePerformanceCard

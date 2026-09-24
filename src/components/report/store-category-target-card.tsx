@@ -16,11 +16,14 @@ import type {
 import { cn, formatNumber, formatPctVi, formatVnd } from "@/lib/utils";
 
 function isTrangSucKhacCategory(label: string): boolean {
-  return label
+  const n = label
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .includes("trang suc khac");
+    .replace(/\s+/g, " ")
+    .trim();
+  // Chỉ ẩn SL cho cột gộp legacy — 3 cột mới (TS Ý+BST / Tây Khác / Hỗn Hợp) vẫn hiện SL.
+  return n === "trang suc khac" || n.startsWith("trang suc khac ");
 }
 
 function formatDateVi(iso: string): string {
@@ -137,6 +140,15 @@ export function StoreCategoryTargetCard({
       customRows.reduce((sum, item) => sum + item.row.dtActual, 0),
     [customRows, rows],
   );
+  const categoryTotals = useMemo(
+    () => ({
+      dtActual: rows.reduce((s, r) => s + r.dtActual, 0),
+      dtPlan: rows.reduce((s, r) => s + r.dtPlan, 0),
+      slActual: rows.reduce((s, r) => s + r.slActual, 0),
+      slPlan: rows.reduce((s, r) => s + r.slPlan, 0),
+    }),
+    [rows],
+  );
 
   return (
     <>
@@ -239,6 +251,42 @@ export function StoreCategoryTargetCard({
                   />
                 ))}
               </tbody>
+              {rows.length > 0 && (
+                <tfoot>
+                  <tr className="border-t border-border bg-lavender-soft/40">
+                    <td className="px-3 py-2.5 font-semibold">Tổng ngành hàng</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">
+                      <span className="font-bold">{formatVnd(categoryTotals.dtActual)}</span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        / {formatVnd(categoryTotals.dtPlan)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-bold tabular-nums text-primary">
+                      {categoryTotals.dtPlan > 0
+                        ? formatPctVi(categoryTotals.dtActual / categoryTotals.dtPlan)
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-medium tabular-nums">
+                      {totalRevenue > 0 && categoryTotals.dtActual > 0
+                        ? formatPctVi(categoryTotals.dtActual / totalRevenue)
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">
+                      <span className="font-bold">{formatNumber(categoryTotals.slActual)}</span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        / {formatNumber(categoryTotals.slPlan)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-bold tabular-nums text-coral">
+                      {categoryTotals.slPlan > 0
+                        ? formatPctVi(categoryTotals.slActual / categoryTotals.slPlan)
+                        : "—"}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>

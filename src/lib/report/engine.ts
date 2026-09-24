@@ -72,6 +72,16 @@ function monthTargetFor(
   return target.monthTotals[key] ?? 0;
 }
 
+/** Tổng KH tháng từ hàng TỔNG (mọi cột DT/SL) — không phụ thuộc map groupConfig. */
+function sumMonthTotalsByKind(target: TargetData, kind: "dt" | "sl"): number {
+  let sum = 0;
+  for (const col of target.columns) {
+    if (col.kind !== kind) continue;
+    sum += target.monthTotals[col.key] ?? 0;
+  }
+  return sum;
+}
+
 type Acc = { sl: number; dt: number };
 
 function aggregateByDateGroup(
@@ -146,8 +156,10 @@ export function buildDayReport(
     }),
     { sl: 0, dt: 0 },
   );
-  const totalMonthSl = groups.reduce((a, g) => a + g.sl.monthTarget, 0);
-  const totalMonthDt = groups.reduce((a, g) => a + g.dt.monthTarget, 0);
+  const fromGroupsSl = groups.reduce((a, g) => a + g.sl.monthTarget, 0);
+  const fromGroupsDt = groups.reduce((a, g) => a + g.dt.monthTarget, 0);
+  const totalMonthSl = sumMonthTotalsByKind(target, "sl") || fromGroupsSl;
+  const totalMonthDt = sumMonthTotalsByKind(target, "dt") || fromGroupsDt;
 
   const total: GroupDayMetrics = {
     groupId: "tong",
