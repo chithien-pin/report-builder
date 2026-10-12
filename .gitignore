@@ -38,6 +38,7 @@ yarn-error.log*
 
 # local dataset cache (dev without Blob)
 .cache
+/data
 
 # typescript
 *.tsbuildinfo
