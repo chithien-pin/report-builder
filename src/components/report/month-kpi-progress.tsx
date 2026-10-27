@@ -14,12 +14,14 @@ function ProgressBar({
   target,
   pct,
   tone,
+  footnote,
 }: {
   label: string;
   actual: number;
   target: number;
   pct: number | null;
   tone: "primary" | "coral";
+  footnote?: string;
 }) {
   const fullPct = pct ?? (target > 0 ? actual / target : null);
   const ratio = fullPct != null ? Math.min(fullPct, 1) : 0;
@@ -39,6 +41,9 @@ function ProgressBar({
               {formatNumber(target)}
             </strong>
           </p>
+          {footnote ? (
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{footnote}</p>
+          ) : null}
         </div>
         <p
           className={cn(
@@ -143,6 +148,11 @@ export function MonthKpiProgress({
           target={kpi.dtTarget}
           pct={kpi.dtPct}
           tone="primary"
+          footnote={
+            kpi.dtKgbgExcluded
+              ? `Target đã trừ doanh thu KGBG ${formatNumber(kpi.dtKgbgExcluded)}`
+              : undefined
+          }
         />
         <ProgressBar
           label="Sản lượng"

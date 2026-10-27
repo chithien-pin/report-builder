@@ -49,6 +49,41 @@ function slForRow(row: SalesRow, group: ReportGroup): number {
   return group.slUnit === "chi" ? row.goldWeight : row.quantity;
 }
 
+function foldLabel(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .trim();
+}
+
+/** Kim Gia Bảo Gift: mã KGBG, hoặc dòng 24K Quà tặng / Quà tặng. */
+function isKgbgSale(row: SalesRow): boolean {
+  const code = row.productCode.trim().toUpperCase();
+  if (code.startsWith("KGBG")) return true;
+  const line = foldLabel(row.productLine);
+  if (line === "24k qua tang" || line === "qua tang") return true;
+  const text = foldLabel(`${row.productName} ${row.productCategory}`);
+  return text.includes("kgbg") || text.includes("kim gia bao gift");
+}
+
+function kgbgRevenueThrough(
+  sales: SalesRow[],
+  config: GroupConfig,
+  asOfDate: string,
+): number {
+  const month = asOfDate.slice(0, 7);
+  let sum = 0;
+  for (const row of sales) {
+    if (!row.date.startsWith(month) || row.date > asOfDate) continue;
+    if (!resolveGroup(row.productLine, config)) continue;
+    if (!isKgbgSale(row)) continue;
+    sum += row.revenue;
+  }
+  return round(sum);
+}
+
 function resolveGroup(
   productLine: string,
   config: GroupConfig,
@@ -202,14 +237,18 @@ export function buildMonthKpi(
   if (!lastDate) return null;
 
   const report = buildDayReport(sales, target, config, lastDate);
+  const dtKgbgExcluded = kgbgRevenueThrough(sales, config, lastDate);
+  const dtActual = report.total.dt.cumulativeActual;
+  const dtTarget = round(Math.max(0, report.total.dt.monthTarget - dtKgbgExcluded), 2);
   return {
     asOfDate: lastDate,
     slActual: report.total.sl.cumulativeActual,
     slTarget: report.total.sl.monthTarget,
     slPct: report.total.sl.monthPct,
-    dtActual: report.total.dt.cumulativeActual,
-    dtTarget: report.total.dt.monthTarget,
-    dtPct: report.total.dt.monthPct,
+    dtActual,
+    dtTarget,
+    dtPct: pct(dtActual, dtTarget),
+    dtKgbgExcluded,
   };
 }
 

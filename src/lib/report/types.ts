@@ -152,6 +152,8 @@ export interface MonthKpiSummary {
   dtTarget: number;
   dtPct: number | null;
   asOfDate: string;
+  /** Doanh thu Kim Gia Bảo Gift (KGBG / 24K Quà tặng) đã trừ khỏi target doanh thu. */
+  dtKgbgExcluded?: number;
 }
 
 /** KPI vận hành overview: DT, hóa đơn, AOV, UPT (theo khoảng ngày lọc). */
