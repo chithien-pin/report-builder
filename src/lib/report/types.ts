@@ -152,7 +152,7 @@ export interface MonthKpiSummary {
   dtTarget: number;
   dtPct: number | null;
   asOfDate: string;
-  /** Doanh thu Kim Gia Bảo Gift (KGBG / 24K Quà tặng) đã trừ khỏi target doanh thu. */
+  /** Doanh thu Kim Gia Bảo Gift (KGBG / 24K Quà tặng) đã trừ khỏi doanh thu thực tế. */
   dtKgbgExcluded?: number;
 }
 

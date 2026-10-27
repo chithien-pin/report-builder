@@ -150,7 +150,7 @@ export function MonthKpiProgress({
           tone="primary"
           footnote={
             kpi.dtKgbgExcluded
-              ? `Target đã trừ doanh thu KGBG ${formatNumber(kpi.dtKgbgExcluded)}`
+              ? `Đã trừ doanh thu KGBG ${formatNumber(kpi.dtKgbgExcluded)}`
               : undefined
           }
         />

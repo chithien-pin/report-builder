@@ -238,8 +238,8 @@ export function buildMonthKpi(
 
   const report = buildDayReport(sales, target, config, lastDate);
   const dtKgbgExcluded = kgbgRevenueThrough(sales, config, lastDate);
-  const dtActual = report.total.dt.cumulativeActual;
-  const dtTarget = round(Math.max(0, report.total.dt.monthTarget - dtKgbgExcluded), 2);
+  const dtActual = round(Math.max(0, report.total.dt.cumulativeActual - dtKgbgExcluded));
+  const dtTarget = report.total.dt.monthTarget;
   return {
     asOfDate: lastDate,
     slActual: report.total.sl.cumulativeActual,
